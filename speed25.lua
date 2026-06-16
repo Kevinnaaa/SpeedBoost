@@ -11,7 +11,7 @@ local RunService = game:GetService("RunService")
 
 -- Settings
 local ScriptActive = true
-local SpeedValue = 50  -- Change this to your desired speed (default 100)
+local SpeedValue = 25  -- Change this to your desired speed (default 100)
 
 -- Clean up old GUI
 if game.CoreGui:FindFirstChild("BloxFruitSpeedGUI") then
