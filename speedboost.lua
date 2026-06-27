@@ -24,7 +24,7 @@ local Config = {
     Speed = 100,
     JumpPower = 80,
     MaxAirJumps = 5,
-    ESPEnabled = true, -- Always true, never toggled
+    ESPEnabled = true,
     ShowFPS = true,
     BoxThickness = 2,
     ScanInterval = 0.1,
@@ -32,7 +32,7 @@ local Config = {
     TEXT_FONT = Enum.Font.GothamBold,
     TEXT_OUTLINE = true,
     HIGHLIGHT_ENABLED = true,
-    MaxESPDistance = 1000 -- Maximum distance to show ESP
+    MaxESPDistance = 2000
 }
 
 -- =============================================
@@ -98,7 +98,7 @@ local function getTeamColor(player)
     if player.Team then
         return player.Team.TeamColor.Color
     end
-    return Color3.new(0.5, 0.5, 0.5) -- Gray for no team
+    return Color3.new(0.5, 0.5, 0.5)
 end
 
 -- =============================================
@@ -111,7 +111,6 @@ local function createUI()
     MainGUI.Parent = game.CoreGui
     MainGUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
-    -- Main Container
     local Container = Instance.new("Frame")
     Container.Size = UDim2.new(0, 340, 0, 110)
     Container.Position = UDim2.new(0.5, -170, 0.80, 0)
@@ -125,7 +124,6 @@ local function createUI()
     ContainerCorner.CornerRadius = UDim.new(0, 12)
     ContainerCorner.Parent = Container
     
-    -- Glow Border
     local GlowBorder = Instance.new("Frame")
     GlowBorder.Size = UDim2.new(1, 4, 1, 4)
     GlowBorder.Position = UDim2.new(0, -2, 0, -2)
@@ -138,7 +136,6 @@ local function createUI()
     GlowCorner.CornerRadius = UDim.new(0, 14)
     GlowCorner.Parent = GlowBorder
     
-    -- Top Section (Speed)
     local SpeedFrame = Instance.new("Frame")
     SpeedFrame.Size = UDim2.new(1, -20, 0, 25)
     SpeedFrame.Position = UDim2.new(0, 10, 0, 6)
@@ -167,7 +164,6 @@ local function createUI()
     SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
     SpeedLabel.Parent = SpeedFrame
     
-    -- Middle Section (Jump)
     local JumpFrame = Instance.new("Frame")
     JumpFrame.Size = UDim2.new(1, -20, 0, 25)
     JumpFrame.Position = UDim2.new(0, 10, 0, 35)
@@ -196,7 +192,6 @@ local function createUI()
     JumpLabel.TextXAlignment = Enum.TextXAlignment.Left
     JumpLabel.Parent = JumpFrame
     
-    -- FPS Counter
     local FPSFrame = Instance.new("Frame")
     FPSFrame.Size = UDim2.new(0, 80, 0, 25)
     FPSFrame.Position = UDim2.new(0, 10, 0, 64)
@@ -225,7 +220,6 @@ local function createUI()
     FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
     FPSLabel.Parent = FPSFrame
     
-    -- ESP Status (Now just shows permanent status)
     local ESPStatus = Instance.new("TextLabel")
     ESPStatus.Size = UDim2.new(0, 70, 0, 20)
     ESPStatus.Position = UDim2.new(1, -75, 0, 6)
@@ -237,7 +231,6 @@ local function createUI()
     ESPStatus.TextXAlignment = Enum.TextXAlignment.Right
     ESPStatus.Parent = Container
     
-    -- Stop Button
     local StopBtn = Instance.new("TextButton")
     StopBtn.Size = UDim2.new(0, 60, 0, 24)
     StopBtn.Position = UDim2.new(1, -65, 1, -28)
@@ -266,7 +259,6 @@ local function createUI()
     
     StopBtn.MouseButton1Click:Connect(terminateScript)
     
-    -- FPS Update Loop
     task.spawn(function()
         while ScriptActive and MainGUI do
             pcall(function()
@@ -318,7 +310,6 @@ local function applyStats()
     end)
 end
 
--- Air Jump
 UserInputService.JumpRequest:Connect(function()
     if not ScriptActive then return end
     
@@ -357,12 +348,11 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 -- =============================================
--- TEAM-BASED BOX ESP SYSTEM - PERMANENT
+-- TEAM-BASED BOX ESP SYSTEM
 -- =============================================
 local function createBoxESP(player)
     if player == LocalPlayer or not ScriptActive then return end
     
-    -- Clean up existing ESP
     if ESPObjects[player.Name] then
         pcall(function()
             if ESPObjects[player.Name].Container then
@@ -378,20 +368,17 @@ local function createBoxESP(player)
     local function addESP(character)
         if not character then return end
         
-        -- Wait for character to load
         local humanoid = character:WaitForChild("Humanoid", 5)
         local rootPart = character:WaitForChild("HumanoidRootPart", 5)
         local head = character:WaitForChild("Head", 5)
         
         if not humanoid or not rootPart or not head then 
-            print("[!] " .. player.Name .. " character not fully loaded")
             return 
         end
         
-        -- Get team color
         local teamColor = getTeamColor(player)
         
-        -- Create Highlight (Always enabled)
+        -- Create Highlight
         local highlight = nil
         if Config.HIGHLIGHT_ENABLED then
             highlight = Instance.new("Highlight")
@@ -399,20 +386,32 @@ local function createBoxESP(player)
             highlight.OutlineColor = Color3.new(0, 0, 0)
             highlight.FillTransparency = 0.5
             highlight.OutlineTransparency = 0
-            highlight.Enabled = true -- Always enabled
+            highlight.Enabled = true
             highlight.Parent = character
         end
         
-        -- Create Billboard GUI for nametag
+        -- Create Billboard GUI for nametag (FIXED)
         local billboard = Instance.new("BillboardGui")
         billboard.Adornee = head
         billboard.Size = UDim2.new(0, 200, 0, 50)
-        billboard.StudsOffset = Vector3.new(0, 4, 0)
+        billboard.StudsOffset = Vector3.new(0, 3, 0)
         billboard.AlwaysOnTop = true
-        billboard.Enabled = true -- Always enabled
+        billboard.Enabled = true
         billboard.Parent = character
+        billboard.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         
-        -- Name label
+        -- Name label with background for visibility
+        local nameBg = Instance.new("Frame")
+        nameBg.Size = UDim2.new(1, 0, 1, 0)
+        nameBg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        nameBg.BackgroundTransparency = 0.4
+        nameBg.BorderSizePixel = 0
+        nameBg.Parent = billboard
+        
+        local nameBgCorner = Instance.new("UICorner")
+        nameBgCorner.CornerRadius = UDim.new(0, 4)
+        nameBgCorner.Parent = nameBg
+        
         local nameLabel = Instance.new("TextLabel")
         nameLabel.Size = UDim2.new(1, 0, 1, 0)
         nameLabel.BackgroundTransparency = 1
@@ -420,25 +419,19 @@ local function createBoxESP(player)
         nameLabel.TextColor3 = teamColor
         nameLabel.TextSize = Config.TEXT_SIZE
         nameLabel.Font = Config.TEXT_FONT
+        nameLabel.TextStrokeTransparency = 0
+        nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         nameLabel.Parent = billboard
-        
-        if Config.TEXT_OUTLINE then
-            local outline = Instance.new("UIStroke")
-            outline.Color = Color3.new(0, 0, 0)
-            outline.Thickness = 1.5
-            outline.Parent = nameLabel
-        end
         
         -- Create ScreenGui for box
         local container = Instance.new("ScreenGui")
         container.Name = "BoxESP_" .. player.Name
         container.ResetOnSpawn = false
         container.Parent = game.CoreGui
-        container.Enabled = true -- Always enabled
+        container.Enabled = true
         container.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         container.DisplayOrder = 10
         
-        -- Main box frame
         local boxFrame = Instance.new("Frame")
         boxFrame.Size = UDim2.new(0, 0, 0, 0)
         boxFrame.Position = UDim2.new(0, 0, 0, 0)
@@ -480,7 +473,7 @@ local function createBoxESP(player)
         rightLine.BorderSizePixel = 0
         rightLine.Parent = boxFrame
         
-        -- Health bar background
+        -- Health bar
         local healthBg = Instance.new("Frame")
         healthBg.Size = UDim2.new(0, 6, 1, 0)
         healthBg.Position = UDim2.new(1, 4, 0, 0)
@@ -489,7 +482,6 @@ local function createBoxESP(player)
         healthBg.BorderColor3 = Color3.fromRGB(0, 0, 0)
         healthBg.Parent = boxFrame
         
-        -- Health bar fill
         local healthFill = Instance.new("Frame")
         healthFill.Size = UDim2.new(1, 0, 1, 0)
         healthFill.Position = UDim2.new(0, 0, 0, 0)
@@ -556,16 +548,12 @@ local function createBoxESP(player)
             Humanoid = humanoid,
             RootPart = rootPart
         }
-        
-        print("[+] ESP created for " .. player.Name)
     end
     
-    -- Add ESP to existing character
     if player.Character then
         addESP(player.Character)
     end
     
-    -- Connect to character added
     local conn = player.CharacterAdded:Connect(function(character)
         task.wait(0.5)
         addESP(character)
@@ -584,17 +572,14 @@ local function onTeamChanged(player)
     
     local teamColor = getTeamColor(player)
     
-    -- Update highlight color
     if espData.Highlight then
         espData.Highlight.FillColor = teamColor
     end
     
-    -- Update nametag color
     if espData.NameLabel then
         espData.NameLabel.TextColor3 = teamColor
     end
     
-    -- Update box colors
     if espData.TopLine then
         espData.TopLine.BackgroundColor3 = teamColor
         espData.BottomLine.BackgroundColor3 = teamColor
@@ -604,7 +589,7 @@ local function onTeamChanged(player)
 end
 
 -- =============================================
--- MAIN ESP UPDATE LOOP - PERMANENT WITH HIDING
+-- MAIN ESP UPDATE LOOP
 -- =============================================
 task.spawn(function()
     while ScriptActive do
@@ -624,7 +609,6 @@ task.spawn(function()
                 
                 local character = player.Character
                 if not character then 
-                    -- Hide everything when character is not loaded
                     espData.BoxFrame.Visible = false
                     if espData.Billboard then espData.Billboard.Enabled = false end
                     if espData.Highlight then espData.Highlight.Enabled = false end
@@ -645,35 +629,35 @@ task.spawn(function()
                 -- Update billboard attachment
                 if espData.Billboard then
                     espData.Billboard.Adornee = head
+                    espData.Billboard.Enabled = true
                 end
                 
                 -- Update highlight
                 if espData.Highlight then
                     espData.Highlight.Parent = character
+                    espData.Highlight.Enabled = true
                 end
                 
-                -- Always enabled
                 espData.Container.Enabled = true
                 
                 -- Get player position on screen
                 local pos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
                 
-                -- Check if player is within reasonable distance (max 500 studs)
+                -- Check distance
                 local dist = (Camera.CFrame.Position - rootPart.Position).Magnitude
                 local isInRange = dist <= Config.MaxESPDistance
                 
                 if onScreen and isInRange then
-                    -- Show ESP elements
+                    -- Show everything
                     espData.BoxFrame.Visible = true
-                    if espData.Billboard then espData.Billboard.Enabled = true end
-                    if espData.Highlight then espData.Highlight.Enabled = true end
                     
-                    local boxSize = math.clamp(600 / dist * 5, 30, 200)
+                    -- Calculate box size
+                    local boxSize = math.clamp(800 / dist * 5, 20, 200)
                     
                     espData.BoxFrame.Size = UDim2.new(0, boxSize, 0, boxSize * 1.5)
                     espData.BoxFrame.Position = UDim2.new(0, pos.X - boxSize/2, 0, pos.Y - boxSize * 1.5/2)
                     
-                    -- Update health bar
+                    -- Update health
                     local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
                     
                     espData.HealthFill.Size = UDim2.new(1, 0, healthPercent, 0)
@@ -720,10 +704,14 @@ task.spawn(function()
                         local level = leaderstats:FindFirstChild("Level")
                         if level then
                             espData.NameLabel.Text = player.Name .. " [Lv." .. tostring(level.Value) .. "]"
+                        else
+                            espData.NameLabel.Text = player.Name
                         end
+                    else
+                        espData.NameLabel.Text = player.Name
                     end
                 else
-                    -- Hide everything when player is off-screen or out of range
+                    -- Hide everything
                     espData.BoxFrame.Visible = false
                     if espData.Billboard then espData.Billboard.Enabled = false end
                     if espData.Highlight then espData.Highlight.Enabled = false end
@@ -737,10 +725,8 @@ end)
 -- MAIN EXECUTION
 -- =============================================
 
--- Create UI
 local UI = createUI()
 
--- Start stats loop
 task.spawn(function()
     while ScriptActive do
         applyStats()
@@ -748,7 +734,6 @@ task.spawn(function()
     end
 end)
 
--- Character respawn
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.5)
     applyStats()
@@ -756,32 +741,26 @@ LocalPlayer.CharacterAdded:Connect(function()
     isGrounded = true
 end)
 
--- Initialize ESP for all players
 task.wait(1)
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         createBoxESP(player)
-        
-        -- Watch for team changes
         player:GetPropertyChangedSignal("Team"):Connect(function()
             onTeamChanged(player)
         end)
     end
 end
 
--- Connect for new players
 Players.PlayerAdded:Connect(function(player)
     if player ~= LocalPlayer then
         task.wait(1)
         createBoxESP(player)
-        
         player:GetPropertyChangedSignal("Team"):Connect(function()
             onTeamChanged(player)
         end)
     end
 end)
 
--- Clean up when player leaves
 Players.PlayerRemoving:Connect(function(player)
     if ESPObjects[player.Name] then
         pcall(function()
@@ -796,11 +775,6 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
--- REMOVED: ESP Toggle (E key) - No longer needed since ESP is permanent
-
--- =============================================
--- INITIALIZATION LOG
--- =============================================
 print("")
 print("╔══════════════════════════════════════╗")
 print("║     BLOX FRUIT ULTIMATE MOBILE      ║")
@@ -810,7 +784,7 @@ print("║  🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps
 print("║  👁️  TEAM ESP: PERMANENT             ║")
 print("║  📊 FPS: ENABLED                     ║")
 print("║  📍 Scan Rate: 0.1s                  ║")
-print("║  📏 Max Distance: " .. Config.MaxESPDistance .. "m             ║")
+print("║  📏 Max Distance: 2000m              ║")
 print("╠══════════════════════════════════════╣")
 print("║  Click 'STOP' to terminate          ║")
 print("╚══════════════════════════════════════╝")
