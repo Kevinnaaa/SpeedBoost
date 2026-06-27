@@ -32,7 +32,7 @@ local Config = {
     TEXT_FONT = Enum.Font.GothamBold,
     TEXT_OUTLINE = true,
     HIGHLIGHT_ENABLED = true,
-    MaxESPDistance = 2000 -- Maximum distance to show ESP
+    MaxESPDistance = 2000 -- Maximum distance to show ESP (2000 studs)
 }
 
 -- =============================================
@@ -658,7 +658,7 @@ task.spawn(function()
                 -- Get player position on screen
                 local pos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
                 
-                -- Check if player is within reasonable distance (max 500 studs)
+                -- Check if player is within range (2000 studs)
                 local dist = (Camera.CFrame.Position - rootPart.Position).Magnitude
                 local isInRange = dist <= Config.MaxESPDistance
                 
@@ -668,7 +668,8 @@ task.spawn(function()
                     if espData.Billboard then espData.Billboard.Enabled = true end
                     if espData.Highlight then espData.Highlight.Enabled = true end
                     
-                    local boxSize = math.clamp(600 / dist * 5, 30, 200)
+                    -- Calculate box size based on distance (adjust for 2000 studs)
+                    local boxSize = math.clamp(800 / dist * 5, 20, 200)
                     
                     espData.BoxFrame.Size = UDim2.new(0, boxSize, 0, boxSize * 1.5)
                     espData.BoxFrame.Position = UDim2.new(0, pos.X - boxSize/2, 0, pos.Y - boxSize * 1.5/2)
@@ -810,7 +811,7 @@ print("║  🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps
 print("║  👁️  TEAM ESP: PERMANENT             ║")
 print("║  📊 FPS: ENABLED                     ║")
 print("║  📍 Scan Rate: 0.1s                  ║")
-print("║  📏 Max Distance: " .. Config.MaxESPDistance .. "m             ║")
+print("║  📏 Max Distance: 2000m              ║")
 print("╠══════════════════════════════════════╣")
 print("║  Click 'STOP' to terminate          ║")
 print("╚══════════════════════════════════════╝")
