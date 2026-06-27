@@ -32,7 +32,7 @@ local Config = {
     TEXT_FONT = Enum.Font.GothamBold,
     TEXT_OUTLINE = true,
     HIGHLIGHT_ENABLED = true,
-    MaxESPDistance = 500 -- Maximum distance to show ESP
+    MaxESPDistance = 2000 -- Maximum distance to show ESP
 }
 
 -- =============================================
