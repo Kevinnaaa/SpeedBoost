@@ -32,7 +32,7 @@ local Config = {
     TEXT_FONT = Enum.Font.GothamBold,
     TEXT_OUTLINE = true,
     HIGHLIGHT_ENABLED = true,
-    MaxESPDistance = 1000
+    MaxESPDistance = 1000 -- 1000 METERS
 }
 
 -- =============================================
@@ -224,7 +224,7 @@ local function createUI()
     ESPStatus.Size = UDim2.new(0, 70, 0, 20)
     ESPStatus.Position = UDim2.new(1, -75, 0, 6)
     ESPStatus.BackgroundTransparency = 1
-    ESPStatus.Text = "ESP ✓"
+    ESPStatus.Text = "ESP ✓ (1km)"
     ESPStatus.TextColor3 = Color3.fromRGB(0, 255, 0)
     ESPStatus.TextSize = 14
     ESPStatus.Font = Enum.Font.GothamBold
@@ -390,7 +390,7 @@ local function createBoxESP(player)
             highlight.Parent = character
         end
         
-        -- Create Billboard GUI for nametag (FIXED)
+        -- Create Billboard GUI for nametag
         local billboard = Instance.new("BillboardGui")
         billboard.Adornee = head
         billboard.Size = UDim2.new(0, 200, 0, 50)
@@ -437,7 +437,7 @@ local function createBoxESP(player)
         boxFrame.Position = UDim2.new(0, 0, 0, 0)
         boxFrame.BackgroundTransparency = 1
         boxFrame.BorderSizePixel = 0
-        boxFrame.Visible = false
+        boxFrame.Visible = false -- Start hidden
         boxFrame.Parent = container
         
         -- Box lines
@@ -589,7 +589,7 @@ local function onTeamChanged(player)
 end
 
 -- =============================================
--- MAIN ESP UPDATE LOOP
+-- MAIN ESP UPDATE LOOP - 1000m RANGE WITH HIDING
 -- =============================================
 task.spawn(function()
     while ScriptActive do
@@ -601,6 +601,7 @@ task.spawn(function()
                 
                 local player = Players:FindFirstChild(playerName)
                 if not player then 
+                    -- Player left, destroy ESP
                     espData.Container:Destroy()
                     if espData.Highlight then espData.Highlight:Destroy() end
                     ESPObjects[playerName] = nil
@@ -609,6 +610,7 @@ task.spawn(function()
                 
                 local character = player.Character
                 if not character then 
+                    -- Character not loaded, hide everything
                     espData.BoxFrame.Visible = false
                     if espData.Billboard then espData.Billboard.Enabled = false end
                     if espData.Highlight then espData.Highlight.Enabled = false end
@@ -620,6 +622,7 @@ task.spawn(function()
                 local head = character:FindFirstChild("Head")
                 
                 if not rootPart or not humanoid or not head then 
+                    -- Missing parts, hide everything
                     espData.BoxFrame.Visible = false
                     if espData.Billboard then espData.Billboard.Enabled = false end
                     if espData.Highlight then espData.Highlight.Enabled = false end
@@ -629,13 +632,11 @@ task.spawn(function()
                 -- Update billboard attachment
                 if espData.Billboard then
                     espData.Billboard.Adornee = head
-                    espData.Billboard.Enabled = true
                 end
                 
                 -- Update highlight
                 if espData.Highlight then
                     espData.Highlight.Parent = character
-                    espData.Highlight.Enabled = true
                 end
                 
                 espData.Container.Enabled = true
@@ -643,16 +644,19 @@ task.spawn(function()
                 -- Get player position on screen
                 local pos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
                 
-                -- Check distance
+                -- Check distance - 1000m max
                 local dist = (Camera.CFrame.Position - rootPart.Position).Magnitude
                 local isInRange = dist <= Config.MaxESPDistance
                 
-                if onScreen and isInRange then
+                -- ONLY SHOW IF: on screen, within range, and ESP enabled
+                if onScreen and isInRange and Config.ESPEnabled then
                     -- Show everything
                     espData.BoxFrame.Visible = true
+                    if espData.Billboard then espData.Billboard.Enabled = true end
+                    if espData.Highlight then espData.Highlight.Enabled = true end
                     
-                    -- Calculate box size
-                    local boxSize = math.clamp(800 / dist * 5, 20, 200)
+                    -- Calculate box size (adjusted for 1000m range)
+                    local boxSize = math.clamp(600 / dist * 5, 20, 200)
                     
                     espData.BoxFrame.Size = UDim2.new(0, boxSize, 0, boxSize * 1.5)
                     espData.BoxFrame.Position = UDim2.new(0, pos.X - boxSize/2, 0, pos.Y - boxSize * 1.5/2)
@@ -711,7 +715,10 @@ task.spawn(function()
                         espData.NameLabel.Text = player.Name
                     end
                 else
-                    -- Hide everything
+                    -- HIDE EVERYTHING when:
+                    -- - Player is off-screen
+                    -- - Player is beyond 1000m range
+                    -- - ESP is disabled
                     espData.BoxFrame.Visible = false
                     if espData.Billboard then espData.Billboard.Enabled = false end
                     if espData.Highlight then espData.Highlight.Enabled = false end
@@ -781,10 +788,10 @@ print("║     BLOX FRUIT ULTIMATE MOBILE      ║")
 print("╠══════════════════════════════════════╣")
 print("║  ⚡ Speed: " .. Config.Speed .. "                      ║")
 print("║  🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps .. "   ║")
-print("║  👁️  TEAM ESP: PERMANENT             ║")
+print("║  👁️  TEAM ESP: PERMANENT (1km)       ║")
 print("║  📊 FPS: ENABLED                     ║")
 print("║  📍 Scan Rate: 0.1s                  ║")
-print("║  📏 Max Distance: 2000m              ║")
+print("║  📏 Max Distance: 1000m              ║")
 print("╠══════════════════════════════════════╣")
 print("║  Click 'STOP' to terminate          ║")
 print("╚══════════════════════════════════════╝")
