@@ -30,7 +30,7 @@ local ESPConfig = {
     TEXT_FONT = Enum.Font.GothamBold,
     TEXT_OUTLINE = true,
     HIGHLIGHT_ENABLED = true,
-    MaxESPDistance = 1000 -- EXACTLY 1000 meters range
+    MaxESPDistance = 1000
 }
 
 -- =============================================
@@ -95,7 +95,7 @@ local function createBoxESP(player)
             highlight.Parent = character
         end
         
-        -- Create Billboard GUI for nametag
+        -- Create Billboard GUI for nametag (NO BACKGROUND)
         local billboard = Instance.new("BillboardGui")
         billboard.Adornee = head
         billboard.Size = UDim2.new(0, 200, 0, 50)
@@ -105,18 +105,7 @@ local function createBoxESP(player)
         billboard.Parent = character
         billboard.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         
-        -- Name label with background
-        local nameBg = Instance.new("Frame")
-        nameBg.Size = UDim2.new(1, 0, 1, 0)
-        nameBg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        nameBg.BackgroundTransparency = 0.4
-        nameBg.BorderSizePixel = 0
-        nameBg.Parent = billboard
-        
-        local nameBgCorner = Instance.new("UICorner")
-        nameBgCorner.CornerRadius = UDim.new(0, 4)
-        nameBgCorner.Parent = nameBg
-        
+        -- Name label (NO BACKGROUND)
         local nameLabel = Instance.new("TextLabel")
         nameLabel.Size = UDim2.new(1, 0, 1, 0)
         nameLabel.BackgroundTransparency = 1
@@ -334,29 +323,29 @@ task.spawn(function()
                 -- Update billboard attachment
                 if espData.Billboard then
                     espData.Billboard.Adornee = head
-                    espData.Billboard.Enabled = true
+                    espData.Billboard.Enabled = ESPConfig.ESPEnabled
                 end
                 
                 -- Update highlight
                 if espData.Highlight then
                     espData.Highlight.Parent = character
-                    espData.Highlight.Enabled = true
+                    espData.Highlight.Enabled = ESPConfig.ESPEnabled
                 end
                 
-                espData.Container.Enabled = true
+                espData.Container.Enabled = ESPConfig.ESPEnabled
                 
                 -- Get player position on screen
                 local pos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
                 
-                -- Check distance - EXACTLY 1000m range
+                -- Check distance - 1000m range
                 local dist = (Camera.CFrame.Position - rootPart.Position).Magnitude
-                local isInRange = dist <= ESPConfig.MaxESPDistance -- 1000 meters
+                local isInRange = dist <= ESPConfig.MaxESPDistance
                 
-                if onScreen and isInRange then
+                if onScreen and isInRange and ESPConfig.ESPEnabled then
                     -- Show everything
                     espData.BoxFrame.Visible = true
                     
-                    -- Calculate box size (adjusted for 1000m range)
+                    -- Calculate box size
                     local boxSize = math.clamp(600 / dist * 5, 20, 200)
                     
                     espData.BoxFrame.Size = UDim2.new(0, boxSize, 0, boxSize * 1.5)
@@ -416,7 +405,7 @@ task.spawn(function()
                         espData.NameLabel.Text = player.Name
                     end
                 else
-                    -- Hide everything when player is off-screen or out of range (>1000m)
+                    -- Hide everything when off-screen, out of range, or ESP disabled
                     espData.BoxFrame.Visible = false
                     if espData.Billboard then espData.Billboard.Enabled = false end
                     if espData.Highlight then espData.Highlight.Enabled = false end
@@ -448,6 +437,15 @@ local function applyStats()
     end)
 end
 
+-- Start stats loop
+task.spawn(function()
+    while ScriptActive do
+        applyStats()
+        task.wait(0.3)
+    end
+end)
+
+-- Air Jump
 UserInputService.JumpRequest:Connect(function()
     if not ScriptActive then return end
     
@@ -560,14 +558,16 @@ local ESPToggle = MainTab:CreateToggle({
     Callback = function(Value)
         ESPConfig.ESPEnabled = Value
         for _, espData in pairs(ESPObjects) do
-            if espData and espData.Container then
-                espData.Container.Enabled = Value
-            end
-            if espData and espData.Billboard then
-                espData.Billboard.Enabled = Value
-            end
-            if espData and espData.Highlight then
-                espData.Highlight.Enabled = Value
+            if espData then
+                if espData.Container then
+                    espData.Container.Enabled = Value
+                end
+                if espData.Billboard then
+                    espData.Billboard.Enabled = Value
+                end
+                if espData.Highlight then
+                    espData.Highlight.Enabled = Value
+                end
             end
         end
     end
@@ -585,7 +585,7 @@ local SpeedSlider = MainTab:CreateSlider({
     Range = {16, 250},
     Increment = 1,
     Suffix = "",
-    CurrentValue = 100,
+    CurrentValue = ESPConfig.Speed,
     Flag = "WalkSpeed",
     Callback = function(Value)
         ESPConfig.Speed = Value
@@ -599,7 +599,7 @@ local JumpSlider = MainTab:CreateSlider({
     Range = {50, 200},
     Increment = 5,
     Suffix = "",
-    CurrentValue = 80,
+    CurrentValue = ESPConfig.JumpPower,
     Flag = "JumpPower",
     Callback = function(Value)
         ESPConfig.JumpPower = Value
@@ -613,7 +613,7 @@ local AirJumpsSlider = MainTab:CreateSlider({
     Range = {0, 10},
     Increment = 1,
     Suffix = "",
-    CurrentValue = 5,
+    CurrentValue = ESPConfig.MaxAirJumps,
     Flag = "AirJumps",
     Callback = function(Value)
         ESPConfig.MaxAirJumps = Value
@@ -633,7 +633,7 @@ local PlayerCountLabel = PlayersTab:CreateLabel("Players Online: 0")
 -- Function to update player list
 local function UpdatePlayerList()
     local players = Players:GetPlayers()
-    local count = #players - 1 -- Exclude local player
+    local count = #players - 1
     PlayerCountLabel:Set("Players Online: " .. count)
 end
 
@@ -651,21 +651,15 @@ local ColorsTab = Window:CreateTab("Colors", "palette")
 -- Team Colors Section
 local TeamColorsSection = ColorsTab:CreateSection("Team Colors")
 
--- Team Color Display
-local function CreateTeamColorDisplay(teamName, team)
-    local color = team and team.TeamColor.Color or Color3.fromRGB(128, 128, 128)
-    local displayLabel = ColorsTab:CreateLabel(
-        teamName .. ": " .. (team and team.Name or "No Team"),
+-- Display all teams
+for _, team in ipairs(Teams:GetTeams()) do
+    local color = team.TeamColor.Color
+    ColorsTab:CreateLabel(
+        team.Name .. " Team",
         nil,
         color,
         true
     )
-    return displayLabel
-end
-
--- Display all teams
-for _, team in ipairs(Teams:GetTeams()) do
-    CreateTeamColorDisplay(team.Name, team)
 end
 
 -- Toggle Highlight
