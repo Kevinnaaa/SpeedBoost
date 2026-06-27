@@ -1,7 +1,7 @@
 --[[
     BLOX FRUIT - ULTIMATE MOBILE
     Speed Boost + Air Jump + ESP + FPS Counter
-    Team-based Box ESP with Highlights
+    Team-based Box ESP with Highlights - PERMANENT
 ]]
 
 repeat wait() until game:IsLoaded() and game.Players.LocalPlayer
@@ -24,7 +24,7 @@ local Config = {
     Speed = 100,
     JumpPower = 80,
     MaxAirJumps = 5,
-    ESPEnabled = true,
+    ESPEnabled = true, -- Always true, never toggled
     ShowFPS = true,
     BoxThickness = 2,
     ScanInterval = 0.1,
@@ -224,7 +224,7 @@ local function createUI()
     FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
     FPSLabel.Parent = FPSFrame
     
-    -- ESP Status
+    -- ESP Status (Now just shows permanent status)
     local ESPStatus = Instance.new("TextLabel")
     ESPStatus.Size = UDim2.new(0, 70, 0, 20)
     ESPStatus.Position = UDim2.new(1, -75, 0, 6)
@@ -356,7 +356,7 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 -- =============================================
--- TEAM-BASED BOX ESP SYSTEM
+-- TEAM-BASED BOX ESP SYSTEM - PERMANENT
 -- =============================================
 local function createBoxESP(player)
     if player == LocalPlayer or not ScriptActive then return end
@@ -390,7 +390,7 @@ local function createBoxESP(player)
         -- Get team color
         local teamColor = getTeamColor(player)
         
-        -- Create Highlight
+        -- Create Highlight (Always enabled)
         local highlight = nil
         if Config.HIGHLIGHT_ENABLED then
             highlight = Instance.new("Highlight")
@@ -398,6 +398,7 @@ local function createBoxESP(player)
             highlight.OutlineColor = Color3.new(0, 0, 0)
             highlight.FillTransparency = 0.5
             highlight.OutlineTransparency = 0
+            highlight.Enabled = true -- Always enabled
             highlight.Parent = character
         end
         
@@ -407,7 +408,7 @@ local function createBoxESP(player)
         billboard.Size = UDim2.new(0, 200, 0, 50)
         billboard.StudsOffset = Vector3.new(0, 4, 0)
         billboard.AlwaysOnTop = true
-        billboard.Enabled = Config.ESPEnabled
+        billboard.Enabled = true -- Always enabled
         billboard.Parent = character
         
         -- Name label
@@ -432,7 +433,7 @@ local function createBoxESP(player)
         container.Name = "BoxESP_" .. player.Name
         container.ResetOnSpawn = false
         container.Parent = game.CoreGui
-        container.Enabled = Config.ESPEnabled
+        container.Enabled = true -- Always enabled
         container.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         container.DisplayOrder = 10
         
@@ -602,7 +603,7 @@ local function onTeamChanged(player)
 end
 
 -- =============================================
--- MAIN ESP UPDATE LOOP
+-- MAIN ESP UPDATE LOOP - PERMANENT
 -- =============================================
 task.spawn(function()
     while ScriptActive do
@@ -639,20 +640,16 @@ task.spawn(function()
                 -- Update billboard attachment
                 if espData.Billboard then
                     espData.Billboard.Adornee = head
-                    espData.Billboard.Enabled = Config.ESPEnabled
+                    espData.Billboard.Enabled = true -- Always enabled
                 end
                 
                 -- Update highlight
                 if espData.Highlight then
                     espData.Highlight.Parent = character
+                    espData.Highlight.Enabled = true -- Always enabled
                 end
                 
-                -- Only show if ESP is enabled
-                if not Config.ESPEnabled then
-                    espData.Container.Enabled = false
-                    continue
-                end
-                
+                -- Always enabled
                 espData.Container.Enabled = true
                 
                 -- Get player position on screen
@@ -786,32 +783,7 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
--- ESP Toggle (E key)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.E then
-        Config.ESPEnabled = not Config.ESPEnabled
-        
-        for _, espData in pairs(ESPObjects) do
-            if espData then
-                if espData.Container then
-                    espData.Container.Enabled = Config.ESPEnabled
-                end
-                if espData.Billboard then
-                    espData.Billboard.Enabled = Config.ESPEnabled
-                end
-                if espData.Highlight then
-                    espData.Highlight.Enabled = Config.ESPEnabled
-                end
-            end
-        end
-        
-        if UI and UI.ESPStatus then
-            UI.ESPStatus.Text = Config.ESPEnabled and "ESP ✓" or "ESP ✗"
-            UI.ESPStatus.TextColor3 = Config.ESPEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-        end
-    end
-end)
+-- REMOVED: ESP Toggle (E key) - No longer needed since ESP is permanent
 
 -- =============================================
 -- INITIALIZATION LOG
@@ -822,11 +794,10 @@ print("║     BLOX FRUIT ULTIMATE MOBILE      ║")
 print("╠══════════════════════════════════════╣")
 print("║  ⚡ Speed: " .. Config.Speed .. "                      ║")
 print("║  🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps .. "   ║")
-print("║  👁️  TEAM ESP: ENABLED               ║")
+print("║  👁️  TEAM ESP: PERMANENT             ║")
 print("║  📊 FPS: ENABLED                     ║")
 print("║  📍 Scan Rate: 0.1s                  ║")
 print("╠══════════════════════════════════════╣")
-print("║  Press 'E' to toggle ESP            ║")
 print("║  Click 'STOP' to terminate          ║")
 print("╚══════════════════════════════════════╝")
 print("")
