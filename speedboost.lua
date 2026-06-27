@@ -31,7 +31,8 @@ local Config = {
     TEXT_SIZE = 18,
     TEXT_FONT = Enum.Font.GothamBold,
     TEXT_OUTLINE = true,
-    HIGHLIGHT_ENABLED = true
+    HIGHLIGHT_ENABLED = true,
+    MaxESPDistance = 500 -- Maximum distance to show ESP
 }
 
 -- =============================================
@@ -603,7 +604,7 @@ local function onTeamChanged(player)
 end
 
 -- =============================================
--- MAIN ESP UPDATE LOOP - PERMANENT
+-- MAIN ESP UPDATE LOOP - PERMANENT WITH HIDING
 -- =============================================
 task.spawn(function()
     while ScriptActive do
@@ -623,8 +624,10 @@ task.spawn(function()
                 
                 local character = player.Character
                 if not character then 
+                    -- Hide everything when character is not loaded
                     espData.BoxFrame.Visible = false
                     if espData.Billboard then espData.Billboard.Enabled = false end
+                    if espData.Highlight then espData.Highlight.Enabled = false end
                     continue
                 end
                 
@@ -634,19 +637,19 @@ task.spawn(function()
                 
                 if not rootPart or not humanoid or not head then 
                     espData.BoxFrame.Visible = false
+                    if espData.Billboard then espData.Billboard.Enabled = false end
+                    if espData.Highlight then espData.Highlight.Enabled = false end
                     continue
                 end
                 
                 -- Update billboard attachment
                 if espData.Billboard then
                     espData.Billboard.Adornee = head
-                    espData.Billboard.Enabled = true -- Always enabled
                 end
                 
                 -- Update highlight
                 if espData.Highlight then
                     espData.Highlight.Parent = character
-                    espData.Highlight.Enabled = true -- Always enabled
                 end
                 
                 -- Always enabled
@@ -655,13 +658,20 @@ task.spawn(function()
                 -- Get player position on screen
                 local pos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
                 
-                if onScreen then
-                    local dist = (Camera.CFrame.Position - rootPart.Position).Magnitude
+                -- Check if player is within reasonable distance (max 500 studs)
+                local dist = (Camera.CFrame.Position - rootPart.Position).Magnitude
+                local isInRange = dist <= Config.MaxESPDistance
+                
+                if onScreen and isInRange then
+                    -- Show ESP elements
+                    espData.BoxFrame.Visible = true
+                    if espData.Billboard then espData.Billboard.Enabled = true end
+                    if espData.Highlight then espData.Highlight.Enabled = true end
+                    
                     local boxSize = math.clamp(600 / dist * 5, 30, 200)
                     
                     espData.BoxFrame.Size = UDim2.new(0, boxSize, 0, boxSize * 1.5)
                     espData.BoxFrame.Position = UDim2.new(0, pos.X - boxSize/2, 0, pos.Y - boxSize * 1.5/2)
-                    espData.BoxFrame.Visible = true
                     
                     -- Update health bar
                     local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
@@ -713,7 +723,10 @@ task.spawn(function()
                         end
                     end
                 else
+                    -- Hide everything when player is off-screen or out of range
                     espData.BoxFrame.Visible = false
+                    if espData.Billboard then espData.Billboard.Enabled = false end
+                    if espData.Highlight then espData.Highlight.Enabled = false end
                 end
             end
         end)
@@ -797,6 +810,7 @@ print("║  🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps
 print("║  👁️  TEAM ESP: PERMANENT             ║")
 print("║  📊 FPS: ENABLED                     ║")
 print("║  📍 Scan Rate: 0.1s                  ║")
+print("║  📏 Max Distance: " .. Config.MaxESPDistance .. "m             ║")
 print("╠══════════════════════════════════════╣")
 print("║  Click 'STOP' to terminate          ║")
 print("╚══════════════════════════════════════╝")
