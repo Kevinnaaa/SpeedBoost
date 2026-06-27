@@ -1,10 +1,8 @@
 --[[
     BLOX FRUIT - ULTIMATE MOBILE
     Speed Boost + Air Jump + ESP + FPS Counter
-    All features automatically enabled
-    Press E to toggle ESP
-    Click STOP to terminate script
---]]
+    Fixed ESP with player position tracking
+]]
 
 repeat wait() until game:IsLoaded() and game.Players.LocalPlayer
 
@@ -356,45 +354,48 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 -- =============================================
--- ESP SYSTEM - IDENTIFIES HUMANOID
+-- FIXED ESP SYSTEM - TRACKS PLAYER POSITION
 -- =============================================
 local function createESP(player)
     if player == LocalPlayer or not ScriptActive then return end
     
+    -- Clean up existing ESP for this player
     if ESPObjects[player.Name] then
-        ESPObjects[player.Name].Folder:Destroy()
+        pcall(function()
+            ESPObjects[player.Name].Folder:Destroy()
+        end)
         ESPObjects[player.Name] = nil
     end
     
     local function addESPToCharacter(character)
         if not character then return end
         
-        local humanoid = character:FindFirstChild("Humanoid")
-        if not humanoid then 
-            -- If no humanoid, it might be a NPC or dead player
-            return 
-        end
+        -- Wait for character to fully load
+        local humanoid = character:WaitForChild("Humanoid", 5)
+        local rootPart = character:WaitForChild("HumanoidRootPart", 5)
         
-        local rootPart = character:FindFirstChild("HumanoidRootPart")
-        if not rootPart then return end
+        if not humanoid or not rootPart then return end
         
+        -- Clean up old ESP if exists
         if ESPObjects[player.Name] then
-            ESPObjects[player.Name].Folder:Destroy()
+            pcall(function()
+                ESPObjects[player.Name].Folder:Destroy()
+            end)
             ESPObjects[player.Name] = nil
         end
         
         local folder = Instance.new("Folder")
         folder.Name = "ESP_" .. player.Name
         folder.Parent = game.CoreGui
-        folder.Enabled = Config.ESPEnabled
         
-        -- Billboard GUI
+        -- Billboard GUI attached to the player's root part
         local billboard = Instance.new("BillboardGui")
-        billboard.Size = UDim2.new(0, 220, 0, 80)
+        billboard.Size = UDim2.new(0, 220, 0, 100)
         billboard.Adornee = rootPart
-        billboard.StudsOffset = Vector3.new(0, 3.5, 0)
-        billboard.MaxDistance = 600
+        billboard.StudsOffset = Vector3.new(0, 4, 0)
+        billboard.MaxDistance = 1000
         billboard.AlwaysOnTop = true
+        billboard.Enabled = Config.ESPEnabled
         billboard.Parent = folder
         
         local main = Instance.new("Frame")
@@ -402,22 +403,10 @@ local function createESP(player)
         main.BackgroundTransparency = 1
         main.Parent = billboard
         
-        -- Humanoid Icon (shows it's a player)
-        local humanoidIcon = Instance.new("TextLabel")
-        humanoidIcon.Size = UDim2.new(0, 20, 0, 20)
-        humanoidIcon.Position = UDim2.new(0, 5, 0, 0)
-        humanoidIcon.BackgroundTransparency = 1
-        humanoidIcon.Text = "👤"
-        humanoidIcon.TextSize = 16
-        humanoidIcon.TextColor3 = Color3.fromRGB(100, 200, 255)
-        humanoidIcon.Font = Enum.Font.GothamBold
-        humanoidIcon.TextXAlignment = Enum.TextXAlignment.Center
-        humanoidIcon.Parent = main
-        
-        -- Name with glow
+        -- Player Name
         local nameLabel = Instance.new("TextLabel")
-        nameLabel.Size = UDim2.new(1, -30, 0.4, 0)
-        nameLabel.Position = UDim2.new(0, 30, 0, 0)
+        nameLabel.Size = UDim2.new(1, 0, 0.3, 0)
+        nameLabel.Position = UDim2.new(0, 0, 0, 0)
         nameLabel.BackgroundTransparency = 1
         nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         nameLabel.Text = player.Name
@@ -425,39 +414,38 @@ local function createESP(player)
         nameLabel.Font = Enum.Font.GothamBold
         nameLabel.TextStrokeTransparency = 0.2
         nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
         nameLabel.Parent = main
         
-        -- Status (Humanoid)
-        local statusLabel = Instance.new("TextLabel")
-        statusLabel.Size = UDim2.new(1, 0, 0.25, 0)
-        statusLabel.Position = UDim2.new(0, 0, 0.4, 0)
-        statusLabel.BackgroundTransparency = 1
-        statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-        statusLabel.Text = "🤖 HUMAN"
-        statusLabel.TextScaled = true
-        statusLabel.Font = Enum.Font.GothamBold
-        statusLabel.TextStrokeTransparency = 0.2
-        statusLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        statusLabel.Parent = main
+        -- Position Display
+        local posLabel = Instance.new("TextLabel")
+        posLabel.Size = UDim2.new(1, 0, 0.2, 0)
+        posLabel.Position = UDim2.new(0, 0, 0.3, 0)
+        posLabel.BackgroundTransparency = 1
+        posLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+        posLabel.Text = "📍 POS: 0, 0, 0"
+        posLabel.TextScaled = true
+        posLabel.Font = Enum.Font.GothamBold
+        posLabel.TextStrokeTransparency = 0.2
+        posLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        posLabel.Parent = main
         
-        -- Level
-        local levelLabel = Instance.new("TextLabel")
-        levelLabel.Size = UDim2.new(1, 0, 0.25, 0)
-        levelLabel.Position = UDim2.new(0, 0, 0.6, 0)
-        levelLabel.BackgroundTransparency = 1
-        levelLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-        levelLabel.Text = "LEVEL: ?"
-        levelLabel.TextScaled = true
-        levelLabel.Font = Enum.Font.GothamBold
-        levelLabel.TextStrokeTransparency = 0.2
-        levelLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        levelLabel.Parent = main
+        -- Distance Display
+        local distLabel = Instance.new("TextLabel")
+        distLabel.Size = UDim2.new(1, 0, 0.2, 0)
+        distLabel.Position = UDim2.new(0, 0, 0.5, 0)
+        distLabel.BackgroundTransparency = 1
+        distLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+        distLabel.Text = "📏 DIST: 0m"
+        distLabel.TextScaled = true
+        distLabel.Font = Enum.Font.GothamBold
+        distLabel.TextStrokeTransparency = 0.2
+        distLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        distLabel.Parent = main
         
-        -- Health Bar BG
+        -- Health Bar
         local healthBg = Instance.new("Frame")
         healthBg.Size = UDim2.new(0.85, 0, 0.15, 0)
-        healthBg.Position = UDim2.new(0.075, 0, 0.80, 0)
+        healthBg.Position = UDim2.new(0.075, 0, 0.75, 0)
         healthBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         healthBg.BorderSizePixel = 1
         healthBg.BorderColor3 = Color3.fromRGB(0, 0, 0)
@@ -467,7 +455,6 @@ local function createESP(player)
         healthCorner.CornerRadius = UDim.new(0, 2)
         healthCorner.Parent = healthBg
         
-        -- Health Fill
         local healthFill = Instance.new("Frame")
         healthFill.Size = UDim2.new(1, 0, 1, 0)
         healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
@@ -478,96 +465,124 @@ local function createESP(player)
         fillCorner.CornerRadius = UDim.new(0, 2)
         fillCorner.Parent = healthFill
         
-        -- Distance indicator
-        local distanceLabel = Instance.new("TextLabel")
-        distanceLabel.Size = UDim2.new(0, 80, 0, 16)
-        distanceLabel.Position = UDim2.new(1, -85, 0, 0)
-        distanceLabel.BackgroundTransparency = 1
-        distanceLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-        distanceLabel.Text = ""
-        distanceLabel.TextSize = 12
-        distanceLabel.Font = Enum.Font.Gotham
-        distanceLabel.TextXAlignment = Enum.TextXAlignment.Right
-        distanceLabel.Parent = main
+        -- Status Label
+        local statusLabel = Instance.new("TextLabel")
+        statusLabel.Size = UDim2.new(1, 0, 0.15, 0)
+        statusLabel.Position = UDim2.new(0, 0, 0.85, 0)
+        statusLabel.BackgroundTransparency = 1
+        statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        statusLabel.Text = "🟢 ALIVE"
+        statusLabel.TextScaled = true
+        statusLabel.Font = Enum.Font.GothamBold
+        statusLabel.TextStrokeTransparency = 0.2
+        statusLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        statusLabel.Parent = main
         
         ESPObjects[player.Name] = {
             Folder = folder,
             Billboard = billboard,
             NameLabel = nameLabel,
-            LevelLabel = levelLabel,
+            PosLabel = posLabel,
+            DistLabel = distLabel,
             HealthFill = healthFill,
             StatusLabel = statusLabel,
-            DistanceLabel = distanceLabel,
-            HumanoidIcon = humanoidIcon,
-            Humanoid = humanoid
+            Humanoid = humanoid,
+            RootPart = rootPart
         }
         
-        -- Update loop
+        -- Update loop - tracks position in real-time
         task.spawn(function()
             while ScriptActive and ESPObjects[player.Name] and folder and folder.Parent do
                 pcall(function()
-                    local humanoid = character:FindFirstChild("Humanoid")
-                    if humanoid then
-                        -- Update health
-                        local healthPercent = humanoid.Health / humanoid.MaxHealth
-                        healthFill.Size = UDim2.new(healthPercent, 0, 1, 0)
+                    -- Re-fetch root part and humanoid in case they changed
+                    local currentChar = player.Character
+                    if not currentChar then
+                        folder.Enabled = false
+                        return
+                    end
+                    
+                    local currentRoot = currentChar:FindFirstChild("HumanoidRootPart")
+                    local currentHumanoid = currentChar:FindFirstChild("Humanoid")
+                    
+                    if not currentRoot or not currentHumanoid then
+                        folder.Enabled = false
+                        return
+                    end
+                    
+                    folder.Enabled = Config.ESPEnabled
+                    
+                    -- Update billboard to follow the root part
+                    billboard.Adornee = currentRoot
+                    
+                    -- Get and display position
+                    local pos = currentRoot.Position
+                    local posX = math.floor(pos.X)
+                    local posY = math.floor(pos.Y)
+                    local posZ = math.floor(pos.Z)
+                    posLabel.Text = string.format("📍 X:%d Y:%d Z:%d", posX, posY, posZ)
+                    
+                    -- Calculate and display distance from local player
+                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        local myPos = LocalPlayer.Character.HumanoidRootPart.Position
+                        local distance = (myPos - pos).Magnitude
+                        distLabel.Text = string.format("📏 DIST: %dm", math.floor(distance))
                         
-                        if healthPercent > 0.5 then
-                            healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-                        elseif healthPercent > 0.25 then
-                            healthFill.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+                        -- Color distance based on proximity
+                        if distance < 50 then
+                            distLabel.TextColor3 = Color3.fromRGB(0, 255, 0) -- Close
+                        elseif distance < 150 then
+                            distLabel.TextColor3 = Color3.fromRGB(255, 255, 0) -- Medium
                         else
-                            healthFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                            distLabel.TextColor3 = Color3.fromRGB(255, 100, 100) -- Far
                         end
-                        
-                        -- Update level from leaderstats
-                        local leaderstats = player:FindFirstChild("leaderstats")
-                        if leaderstats then
-                            local level = leaderstats:FindFirstChild("Level")
-                            if level then
-                                levelLabel.Text = "LEVEL: " .. tostring(level.Value)
-                            end
-                        end
-                        
-                        -- Update distance
-                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                            local myPos = LocalPlayer.Character.HumanoidRootPart.Position
-                            local theirPos = rootPart.Position
-                            local distance = (myPos - theirPos).Magnitude
-                            distanceLabel.Text = math.floor(distance) .. "m"
-                            
-                            -- Color based on distance
-                            if distance < 50 then
-                                distanceLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                            elseif distance < 150 then
-                                distanceLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-                            else
-                                distanceLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-                            end
-                        end
-                        
-                        -- Check if humanoid is alive
-                        if humanoid.Health <= 0 then
-                            statusLabel.Text = "💀 DEAD"
-                            statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-                            folder.Enabled = false
-                        else
-                            statusLabel.Text = "🤖 HUMAN"
-                            statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-                            folder.Enabled = Config.ESPEnabled
+                    end
+                    
+                    -- Update health
+                    local healthPercent = currentHumanoid.Health / currentHumanoid.MaxHealth
+                    healthFill.Size = UDim2.new(math.clamp(healthPercent, 0, 1), 0, 1, 0)
+                    
+                    if healthPercent > 0.5 then
+                        healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+                    elseif healthPercent > 0.25 then
+                        healthFill.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+                    else
+                        healthFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                    end
+                    
+                    -- Update status
+                    if currentHumanoid.Health <= 0 then
+                        statusLabel.Text = "💀 DEAD"
+                        statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                    else
+                        statusLabel.Text = "🟢 ALIVE"
+                        statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+                    end
+                    
+                    -- Update leaderstats if available
+                    local leaderstats = player:FindFirstChild("leaderstats")
+                    if leaderstats then
+                        local level = leaderstats:FindFirstChild("Level")
+                        if level then
+                            nameLabel.Text = player.Name .. " [Lv." .. tostring(level.Value) .. "]"
                         end
                     end
                 end)
-                task.wait(0.1)
+                task.wait(0.1) -- Update every 0.1 seconds for smooth tracking
             end
         end)
     end
     
+    -- Add ESP to existing character
     if player.Character then
         addESPToCharacter(player.Character)
     end
     
-    local conn = player.CharacterAdded:Connect(addESPToCharacter)
+    -- Connect to character added
+    local conn = player.CharacterAdded:Connect(function(character)
+        -- Small delay to let character load
+        task.wait(0.5)
+        addESPToCharacter(character)
+    end)
     table.insert(espConnections, conn)
 end
 
@@ -594,17 +609,29 @@ LocalPlayer.CharacterAdded:Connect(function()
     isGrounded = true
 end)
 
--- Initialize ESP
-task.wait(0.5)
+-- Initialize ESP for all players
+task.wait(1)
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         createESP(player)
     end
 end
 
+-- Connect for new players
 Players.PlayerAdded:Connect(function(player)
     if player ~= LocalPlayer then
+        task.wait(1) -- Wait for player to load
         createESP(player)
+    end
+end)
+
+-- Clean up when player leaves
+Players.PlayerRemoving:Connect(function(player)
+    if ESPObjects[player.Name] then
+        pcall(function()
+            ESPObjects[player.Name].Folder:Destroy()
+        end)
+        ESPObjects[player.Name] = nil
     end
 end)
 
@@ -638,7 +665,7 @@ print("║  ⚡ Speed: " .. Config.Speed .. "                      ║")
 print("║  🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps .. "   ║")
 print("║  👁️  ESP: ENABLED                     ║")
 print("║  📊 FPS: ENABLED                     ║")
-print("║  🤖 Humanoid Detection: ACTIVE       ║")
+print("║  📍 Position Tracking: ACTIVE        ║")
 print("╠══════════════════════════════════════╣")
 print("║  Press 'E' to toggle ESP            ║")
 print("║  Click 'STOP' to terminate          ║")
