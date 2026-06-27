@@ -1,7 +1,7 @@
 --[[
     BLOX FRUIT - ULTIMATE MOBILE
     Speed Boost + Air Jump + ESP + FPS Counter
-    Box ESP with health bars and position tracking
+    Accurate Box ESP - Scans every 0.1 seconds
 ]]
 
 repeat wait() until game:IsLoaded() and game.Players.LocalPlayer
@@ -26,8 +26,9 @@ local Config = {
     ESPEnabled = true,
     ShowFPS = true,
     BoxColor = Color3.fromRGB(0, 255, 100),
-    BoxTransparency = 0.5,
-    BoxThickness = 2
+    BoxTransparency = 0.3,
+    BoxThickness = 2,
+    ScanInterval = 0.1 -- Scan every 0.1 seconds
 }
 
 -- =============================================
@@ -358,7 +359,7 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 -- =============================================
--- BOX ESP SYSTEM - DRAWS BOXES ON PLAYERS
+-- ACCURATE BOX ESP SYSTEM - SCANS EVERY 0.1s
 -- =============================================
 local function createBoxESP(player)
     if player == LocalPlayer or not ScriptActive then return end
@@ -374,19 +375,23 @@ local function createBoxESP(player)
     local function addESP(character)
         if not character then return end
         
-        -- Wait for character to load
+        -- Wait for character to load with timeout
         local humanoid = character:WaitForChild("Humanoid", 5)
         local rootPart = character:WaitForChild("HumanoidRootPart", 5)
         
-        if not humanoid or not rootPart then return end
+        if not humanoid or not rootPart then 
+            print("[!] " .. player.Name .. " character not fully loaded")
+            return 
+        end
         
-        -- Create a ScreenGui for this player's ESP
+        -- Create ScreenGui for this player
         local container = Instance.new("ScreenGui")
         container.Name = "BoxESP_" .. player.Name
         container.ResetOnSpawn = false
         container.Parent = game.CoreGui
         container.Enabled = Config.ESPEnabled
         container.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        container.DisplayOrder = 10
         
         -- Main box frame
         local boxFrame = Instance.new("Frame")
@@ -394,6 +399,7 @@ local function createBoxESP(player)
         boxFrame.Position = UDim2.new(0, 0, 0, 0)
         boxFrame.BackgroundTransparency = 1
         boxFrame.BorderSizePixel = 0
+        boxFrame.Visible = false
         boxFrame.Parent = container
         
         -- Top line
@@ -521,111 +527,7 @@ local function createBoxESP(player)
             RootPart = rootPart
         }
         
-        -- Update loop - draws box on screen
-        task.spawn(function()
-            while ScriptActive and ESPObjects[player.Name] and container and container.Parent do
-                pcall(function()
-                    -- Get current character
-                    local currentChar = player.Character
-                    if not currentChar then
-                        container.Enabled = false
-                        return
-                    end
-                    
-                    local currentRoot = currentChar:FindFirstChild("HumanoidRootPart")
-                    local currentHumanoid = currentChar:FindFirstChild("Humanoid")
-                    
-                    if not currentRoot or not currentHumanoid then
-                        container.Enabled = false
-                        return
-                    end
-                    
-                    container.Enabled = Config.ESPEnabled
-                    
-                    -- Get player position on screen
-                    local pos, onScreen = Camera:WorldToViewportPoint(currentRoot.Position)
-                    
-                    if onScreen then
-                        -- Calculate box size based on distance
-                        local dist = (Camera.CFrame.Position - currentRoot.Position).Magnitude
-                        local boxSize = math.clamp(600 / dist * 5, 30, 200)
-                        
-                        -- Update box position and size
-                        boxFrame.Size = UDim2.new(0, boxSize, 0, boxSize * 1.5)
-                        boxFrame.Position = UDim2.new(0, pos.X - boxSize/2, 0, pos.Y - boxSize * 1.5/2)
-                        
-                        -- Update health bar
-                        local healthPercent = currentHumanoid.Health / currentHumanoid.MaxHealth
-                        healthFill.Size = UDim2.new(1, 0, math.clamp(healthPercent, 0, 1), 0)
-                        healthFill.Position = UDim2.new(0, 0, 1 - math.clamp(healthPercent, 0, 1), 0)
-                        
-                        -- Color health bar based on health
-                        if healthPercent > 0.5 then
-                            healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-                            healthLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                        elseif healthPercent > 0.25 then
-                            healthFill.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
-                            healthLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-                        else
-                            healthFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-                            healthLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-                        end
-                        
-                        healthLabel.Text = math.floor(healthPercent * 100) .. "%"
-                        
-                        -- Update distance
-                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                            local myPos = LocalPlayer.Character.HumanoidRootPart.Position
-                            local theirPos = currentRoot.Position
-                            local distance = (myPos - theirPos).Magnitude
-                            distLabel.Text = math.floor(distance) .. "m"
-                            
-                            -- Color distance based on proximity
-                            if distance < 50 then
-                                distLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                            elseif distance < 150 then
-                                distLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-                            else
-                                distLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-                            end
-                        end
-                        
-                        -- Update position
-                        local px = math.floor(currentRoot.Position.X)
-                        local py = math.floor(currentRoot.Position.Y)
-                        local pz = math.floor(currentRoot.Position.Z)
-                        posLabel.Text = string.format("X:%d Y:%d Z:%d", px, py, pz)
-                        
-                        -- Color box based on health
-                        if healthPercent > 0.5 then
-                            Config.BoxColor = Color3.fromRGB(0, 255, 100)
-                        elseif healthPercent > 0.25 then
-                            Config.BoxColor = Color3.fromRGB(255, 255, 0)
-                        else
-                            Config.BoxColor = Color3.fromRGB(255, 0, 0)
-                        end
-                        
-                        topLine.BackgroundColor3 = Config.BoxColor
-                        bottomLine.BackgroundColor3 = Config.BoxColor
-                        leftLine.BackgroundColor3 = Config.BoxColor
-                        rightLine.BackgroundColor3 = Config.BoxColor
-                        
-                        -- Update name with level if available
-                        local leaderstats = player:FindFirstChild("leaderstats")
-                        if leaderstats then
-                            local level = leaderstats:FindFirstChild("Level")
-                            if level then
-                                nameLabel.Text = player.Name .. " [Lv." .. tostring(level.Value) .. "]"
-                            end
-                        end
-                    else
-                        -- Hide when off screen
-                        boxFrame.Size = UDim2.new(0, 0, 0, 0)
-                    end
-                end)
-                task.wait()
-            end
-        end)
+        print("[+] ESP created for " .. player.Name)
     end
     
     -- Add ESP to existing character
@@ -640,6 +542,133 @@ local function createBoxESP(player)
     end)
     table.insert(espConnections, conn)
 end
+
+-- =============================================
+-- MAIN ESP UPDATE LOOP - SCANS EVERY 0.1s
+-- =============================================
+task.spawn(function()
+    while ScriptActive do
+        task.wait(Config.ScanInterval) -- 0.1 seconds
+        
+        pcall(function()
+            -- Update each player's ESP
+            for playerName, espData in pairs(ESPObjects) do
+                if not espData or not espData.Container then continue end
+                
+                local player = Players:FindFirstChild(playerName)
+                if not player then 
+                    espData.Container:Destroy()
+                    ESPObjects[playerName] = nil
+                    continue
+                end
+                
+                local character = player.Character
+                if not character then 
+                    espData.BoxFrame.Visible = false
+                    continue
+                end
+                
+                local rootPart = character:FindFirstChild("HumanoidRootPart")
+                local humanoid = character:FindFirstChild("Humanoid")
+                
+                if not rootPart or not humanoid then 
+                    espData.BoxFrame.Visible = false
+                    continue
+                end
+                
+                -- Only show if ESP is enabled
+                if not Config.ESPEnabled then
+                    espData.Container.Enabled = false
+                    continue
+                end
+                
+                espData.Container.Enabled = true
+                
+                -- Get player position on screen
+                local pos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+                
+                if onScreen then
+                    -- Calculate box size based on distance
+                    local dist = (Camera.CFrame.Position - rootPart.Position).Magnitude
+                    local boxSize = math.clamp(600 / dist * 5, 30, 200)
+                    
+                    -- Update box position and size
+                    espData.BoxFrame.Size = UDim2.new(0, boxSize, 0, boxSize * 1.5)
+                    espData.BoxFrame.Position = UDim2.new(0, pos.X - boxSize/2, 0, pos.Y - boxSize * 1.5/2)
+                    espData.BoxFrame.Visible = true
+                    
+                    -- Update health bar
+                    local healthPercent = humanoid.Health / humanoid.MaxHealth
+                    healthPercent = math.clamp(healthPercent, 0, 1)
+                    
+                    espData.HealthFill.Size = UDim2.new(1, 0, healthPercent, 0)
+                    espData.HealthFill.Position = UDim2.new(0, 0, 1 - healthPercent, 0)
+                    
+                    -- Color health bar based on health
+                    if healthPercent > 0.5 then
+                        espData.HealthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+                        espData.HealthLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        espData.TopLine.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+                        espData.BottomLine.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+                        espData.LeftLine.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+                        espData.RightLine.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+                    elseif healthPercent > 0.25 then
+                        espData.HealthFill.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+                        espData.HealthLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+                        espData.TopLine.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+                        espData.BottomLine.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+                        espData.LeftLine.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+                        espData.RightLine.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+                    else
+                        espData.HealthFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                        espData.HealthLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        espData.TopLine.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                        espData.BottomLine.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                        espData.LeftLine.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                        espData.RightLine.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                    end
+                    
+                    espData.HealthLabel.Text = math.floor(healthPercent * 100) .. "%"
+                    
+                    -- Update distance
+                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        local myPos = LocalPlayer.Character.HumanoidRootPart.Position
+                        local theirPos = rootPart.Position
+                        local distance = (myPos - theirPos).Magnitude
+                        espData.DistLabel.Text = math.floor(distance) .. "m"
+                        
+                        -- Color distance based on proximity
+                        if distance < 50 then
+                            espData.DistLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        elseif distance < 150 then
+                            espData.DistLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+                        else
+                            espData.DistLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+                        end
+                    end
+                    
+                    -- Update position coordinates
+                    local px = math.floor(rootPart.Position.X)
+                    local py = math.floor(rootPart.Position.Y)
+                    local pz = math.floor(rootPart.Position.Z)
+                    espData.PosLabel.Text = string.format("X:%d Y:%d Z:%d", px, py, pz)
+                    
+                    -- Update name with level if available
+                    local leaderstats = player:FindFirstChild("leaderstats")
+                    if leaderstats then
+                        local level = leaderstats:FindFirstChild("Level")
+                        if level then
+                            espData.NameLabel.Text = player.Name .. " [Lv." .. tostring(level.Value) .. "]"
+                        end
+                    end
+                else
+                    -- Hide when off screen
+                    espData.BoxFrame.Visible = false
+                end
+            end
+        end)
+    end
+end)
 
 -- =============================================
 -- MAIN EXECUTION
@@ -720,7 +749,7 @@ print("║  ⚡ Speed: " .. Config.Speed .. "                      ║")
 print("║  🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps .. "   ║")
 print("║  👁️  BOX ESP: ENABLED                 ║")
 print("║  📊 FPS: ENABLED                     ║")
-print("║  📍 Position Tracking: ACTIVE        ║")
+print("║  📍 Scan Rate: 0.1s                  ║")
 print("╠══════════════════════════════════════╣")
 print("║  Press 'E' to toggle ESP            ║")
 print("║  Click 'STOP' to terminate          ║")
