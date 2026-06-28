@@ -390,7 +390,7 @@ local function createBoxESP(player)
             highlight.Parent = character
         end
         
-        -- Create Billboard GUI for nametag
+        -- Create Billboard GUI for nametag (NO BACKGROUND)
         local billboard = Instance.new("BillboardGui")
         billboard.Adornee = head
         billboard.Size = UDim2.new(0, 200, 0, 50)
@@ -400,21 +400,10 @@ local function createBoxESP(player)
         billboard.Parent = character
         billboard.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         
-        -- Name label with background for visibility
-        local nameBg = Instance.new("Frame")
-        nameBg.Size = UDim2.new(1, 0, 1, 0)
-        nameBg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        nameBg.BackgroundTransparency = 0.4
-        nameBg.BorderSizePixel = 0
-        nameBg.Parent = billboard
-        
-        local nameBgCorner = Instance.new("UICorner")
-        nameBgCorner.CornerRadius = UDim.new(0, 4)
-        nameBgCorner.Parent = nameBg
-        
+        -- Name label (NO BACKGROUND, just text with outline)
         local nameLabel = Instance.new("TextLabel")
         nameLabel.Size = UDim2.new(1, 0, 1, 0)
-        nameLabel.BackgroundTransparency = 1
+        nameLabel.BackgroundTransparency = 1 -- FULLY TRANSPARENT
         nameLabel.Text = player.Name
         nameLabel.TextColor3 = teamColor
         nameLabel.TextSize = Config.TEXT_SIZE
@@ -437,7 +426,7 @@ local function createBoxESP(player)
         boxFrame.Position = UDim2.new(0, 0, 0, 0)
         boxFrame.BackgroundTransparency = 1
         boxFrame.BorderSizePixel = 0
-        boxFrame.Visible = false -- Start hidden
+        boxFrame.Visible = false
         boxFrame.Parent = container
         
         -- Box lines
@@ -601,7 +590,6 @@ task.spawn(function()
                 
                 local player = Players:FindFirstChild(playerName)
                 if not player then 
-                    -- Player left, destroy ESP
                     espData.Container:Destroy()
                     if espData.Highlight then espData.Highlight:Destroy() end
                     ESPObjects[playerName] = nil
@@ -610,7 +598,6 @@ task.spawn(function()
                 
                 local character = player.Character
                 if not character then 
-                    -- Character not loaded, hide everything
                     espData.BoxFrame.Visible = false
                     if espData.Billboard then espData.Billboard.Enabled = false end
                     if espData.Highlight then espData.Highlight.Enabled = false end
@@ -622,7 +609,6 @@ task.spawn(function()
                 local head = character:FindFirstChild("Head")
                 
                 if not rootPart or not humanoid or not head then 
-                    -- Missing parts, hide everything
                     espData.BoxFrame.Visible = false
                     if espData.Billboard then espData.Billboard.Enabled = false end
                     if espData.Highlight then espData.Highlight.Enabled = false end
