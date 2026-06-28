@@ -27,7 +27,7 @@ local Config = {
     ESPEnabled = true,
     ShowFPS = true,
     ScanInterval = 0.1,
-    TEXT_SIZE = 14,
+    TEXT_SIZE = 18,
     TEXT_FONT = Enum.Font.GothamBold,
     TEXT_OUTLINE = true,
     HIGHLIGHT_ENABLED = true,
@@ -374,19 +374,26 @@ local function createHighlightESP(player)
             highlight.Parent = character
         end
         
-        -- Create Billboard GUI for name tag
+        -- Create Billboard GUI for name tag and health bar
         local billboard = Instance.new("BillboardGui")
         billboard.Adornee = head
-        billboard.Size = UDim2.new(0, 200, 0, 50)
+        billboard.Size = UDim2.new(0, 200, 0, 80)
         billboard.StudsOffset = Vector3.new(0, 3, 0)
         billboard.AlwaysOnTop = true
         billboard.Enabled = true
         billboard.Parent = character
         billboard.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         
+        -- Container for all labels
+        local mainContainer = Instance.new("Frame", billboard)
+        mainContainer.Size = UDim2.new(1, 0, 1, 0)
+        mainContainer.BackgroundTransparency = 1
+        mainContainer.BorderSizePixel = 0
+        
         -- Name label
-        local nameLabel = Instance.new("TextLabel")
-        nameLabel.Size = UDim2.new(1, 0, 1, 0)
+        local nameLabel = Instance.new("TextLabel", mainContainer)
+        nameLabel.Size = UDim2.new(1, 0, 0, 16)
+        nameLabel.Position = UDim2.new(0, 0, 0, 0)
         nameLabel.BackgroundTransparency = 1
         nameLabel.Text = player.Name
         nameLabel.TextColor3 = teamColor
@@ -394,12 +401,59 @@ local function createHighlightESP(player)
         nameLabel.Font = Config.TEXT_FONT
         nameLabel.TextStrokeTransparency = 0
         nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        nameLabel.Parent = billboard
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Center
+        
+        -- Health bar background
+        local healthBarBg = Instance.new("Frame", mainContainer)
+        healthBarBg.Size = UDim2.new(0.9, 0, 0, 12)
+        healthBarBg.Position = UDim2.new(0.05, 0, 0, 18)
+        healthBarBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        healthBarBg.BorderSizePixel = 1
+        healthBarBg.BorderColor3 = Color3.fromRGB(0, 0, 0)
+        local healthBgCorner = Instance.new("UICorner", healthBarBg)
+        healthBgCorner.CornerRadius = UDim.new(0, 2)
+        
+        -- Health bar fill
+        local healthBarFill = Instance.new("Frame", healthBarBg)
+        healthBarFill.Size = UDim2.new(1, 0, 1, 0)
+        healthBarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        healthBarFill.BorderSizePixel = 0
+        local healthFillCorner = Instance.new("UICorner", healthBarFill)
+        healthFillCorner.CornerRadius = UDim.new(0, 2)
+        
+        -- Health text
+        local healthLabel = Instance.new("TextLabel", mainContainer)
+        healthLabel.Size = UDim2.new(1, 0, 0, 12)
+        healthLabel.Position = UDim2.new(0, 0, 0, 20)
+        healthLabel.BackgroundTransparency = 1
+        healthLabel.Text = "HP: 100/100"
+        healthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        healthLabel.TextSize = 10
+        healthLabel.Font = Enum.Font.Gotham
+        healthLabel.TextXAlignment = Enum.TextXAlignment.Center
+        healthLabel.TextStrokeTransparency = 0.5
+        healthLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        
+        -- Distance label
+        local distanceLabel = Instance.new("TextLabel", mainContainer)
+        distanceLabel.Size = UDim2.new(1, 0, 0, 14)
+        distanceLabel.Position = UDim2.new(0, 0, 0, 62)
+        distanceLabel.BackgroundTransparency = 1
+        distanceLabel.Text = "Distance: 0m"
+        distanceLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
+        distanceLabel.TextSize = 11
+        distanceLabel.Font = Enum.Font.GothamBold
+        distanceLabel.TextXAlignment = Enum.TextXAlignment.Center
+        distanceLabel.TextStrokeTransparency = 0.5
+        distanceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         
         ESPObjects[player.Name] = {
             Billboard = billboard,
             Highlight = highlight,
             NameLabel = nameLabel,
+            HealthBarFill = healthBarFill,
+            HealthLabel = healthLabel,
+            DistanceLabel = distanceLabel,
             Humanoid = humanoid,
             RootPart = rootPart
         }
@@ -491,9 +545,43 @@ task.spawn(function()
                     if espData.Highlight then espData.Highlight.Enabled = true end
                     if espData.Billboard then espData.Billboard.Enabled = true end
                     
-                    -- Update name with health
+                    -- Update health bar
                     local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
-                    espData.NameLabel.Text = player.Name .. " [" .. math.floor(healthPercent * 100) .. "%]"
+                    if espData.HealthBarFill then
+                        espData.HealthBarFill.Size = UDim2.new(healthPercent, 0, 1, 0)
+                    end
+                    
+                    -- Update health color based on percentage
+                    if healthPercent > 0.5 then
+                        if espData.HealthBarFill then espData.HealthBarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0) end
+                    elseif healthPercent > 0.25 then
+                        if espData.HealthBarFill then espData.HealthBarFill.BackgroundColor3 = Color3.fromRGB(255, 255, 0) end
+                    else
+                        if espData.HealthBarFill then espData.HealthBarFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0) end
+                    end
+                    
+                    -- Update health text
+                    if espData.HealthLabel then
+                        espData.HealthLabel.Text = "HP: " .. math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth)
+                    end
+                    
+                    -- Update distance
+                    if espData.DistanceLabel and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        local playerPos = LocalPlayer.Character.HumanoidRootPart.Position
+                        local targetPos = rootPart.Position
+                        local distance = math.floor((playerPos - targetPos).Magnitude)
+                        
+                        espData.DistanceLabel.Text = "Distance: " .. distance .. "m"
+                        
+                        -- Change distance color based on proximity
+                        if distance < 50 then
+                            espData.DistanceLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        elseif distance < 150 then
+                            espData.DistanceLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+                        else
+                            espData.DistanceLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+                        end
+                    end
                 else
                     if espData.Highlight then espData.Highlight.Enabled = false end
                     if espData.Billboard then espData.Billboard.Enabled = false end
