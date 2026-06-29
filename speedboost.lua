@@ -1,6 +1,6 @@
 --[[
-    UNIVERSAL ESP SCRIPT
-    Highlight-based player detection + Speed Boost + Air Jump + FPS Counter
+    UNIVERSAL ESP SCRIPT v2.0
+    Highlight ESP + Speed Boost + Air Jump + FPS Counter + PING + AUTO BLOCK
     Works on any Roblox game
 ]]
 
@@ -12,7 +12,6 @@ local RunService = game:GetService("RunService")
 local Camera = game:GetService("Workspace").CurrentCamera
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local Lighting = game:GetService("Lighting")
 local Stats = game:GetService("Stats")
 local Workspace = game:GetService("Workspace")
 local Teams = game:GetService("Teams")
@@ -29,9 +28,11 @@ local Config = {
     ScanInterval = 0.1,
     TEXT_SIZE = 18,
     TEXT_FONT = Enum.Font.GothamBold,
-    TEXT_OUTLINE = true,
     HIGHLIGHT_ENABLED = true,
-    MaxESPDistance = 2000
+    MaxESPDistance = 2000,
+    AutoBlockEnabled = true,
+    BlockReactionTime = 0.15,
+    AttackDetectionRange = 300
 }
 
 -- =============================================
@@ -43,8 +44,42 @@ local isGrounded = false
 local ESPObjects = {}
 local espConnections = {}
 local MainGUI = nil
-local fpsCounter = 0
-local fpsUpdateTime = 0
+local isBlocking = false
+
+-- =============================================
+-- UTILITIES
+-- =============================================
+local function getFPS()
+    local fps = Stats:FindFirstChild("PerformanceStats")
+    if fps then
+        local fpsValue = fps:FindFirstChild("FPS")
+        if fpsValue then
+            return math.floor(fpsValue.Value)
+        end
+    end
+    return 0
+end
+
+local function getPing()
+    local networkReplicator = Stats:FindFirstChild("Network")
+    if networkReplicator then
+        local serverStockReplicator = networkReplicator:FindFirstChild("ServerStockReplicator")
+        if serverStockReplicator then
+            local dataPing = serverStockReplicator:FindFirstChild("Data Ping")
+            if dataPing then
+                return math.floor(dataPing.Value * 1000)
+            end
+        end
+    end
+    return 0
+end
+
+local function getTeamColor(player)
+    if player.Team then
+        return player.Team.TeamColor.Color
+    end
+    return Color3.fromRGB(0, 150, 255)
+end
 
 -- =============================================
 -- TERMINATE FUNCTION
@@ -77,28 +112,73 @@ local function terminateScript()
 end
 
 -- =============================================
--- FPS COUNTER
+-- AUTO BLOCK SYSTEM
 -- =============================================
-local function getFPS()
-    local fps = Stats:FindFirstChild("PerformanceStats")
-    if fps then
-        local fpsValue = fps:FindFirstChild("FPS")
-        if fpsValue then
-            return math.floor(fpsValue.Value)
+local function detectAndBlockAttacks()
+    if not Config.AutoBlockEnabled or not LocalPlayer.Character then return end
+    
+    pcall(function()
+        local playerRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not playerRoot then return end
+        
+        -- Scan for projectiles and attacks
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if not obj:IsA("BasePart") then continue end
+            if obj:IsDescendantOf(LocalPlayer.Character) then continue end
+            
+            -- Check for small, fast-moving objects (projectiles/skills)
+            local size = obj.Size.Magnitude
+            if size > 15 then continue end
+            
+            local distance = (obj.Position - playerRoot.Position).Magnitude
+            if distance > Config.AttackDetectionRange then continue end
+            
+            local velocity = obj.AssemblyLinearVelocity
+            local speed = velocity.Magnitude
+            
+            -- Only block fast-moving objects
+            if speed < 15 then continue end
+            
+            -- Check if projectile is heading towards player
+            local directionToPlayer = (playerRoot.Position - obj.Position).Unit
+            local projectileDirection = velocity.Unit
+            local dotProduct = directionToPlayer:Dot(projectileDirection)
+            
+            -- If heading towards us (positive dot product)
+            if dotProduct > 0.6 then
+                local timeToImpact = distance / speed
+                
+                -- Block if impact is near
+                if timeToImpact > 0 and timeToImpact < (Config.BlockReactionTime + 0.3) then
+                    if not isBlocking then
+                        isBlocking = true
+                        
+                        -- Send F key press
+                        UserInputService:SendKeyEvent(true, Enum.KeyCode.F, false)
+                        task.wait(0.1)
+                        UserInputService:SendKeyEvent(false, Enum.KeyCode.F, false)
+                        
+                        print("🛡️ AUTO BLOCK - Incoming attack blocked!")
+                        
+                        task.wait(0.2)
+                        isBlocking = false
+                    end
+                    return true
+                end
+            end
         end
-    end
-    return 0
+    end)
+    
+    return false
 end
 
--- =============================================
--- GET TEAM COLOR
--- =============================================
-local function getTeamColor(player)
-    if player.Team then
-        return player.Team.TeamColor.Color
+-- Auto block loop
+task.spawn(function()
+    while ScriptActive do
+        task.wait(0.05)
+        detectAndBlockAttacks()
     end
-    return Color3.fromRGB(0, 150, 255)
-end
+end)
 
 -- =============================================
 -- CREATE MODERN UI
@@ -111,8 +191,8 @@ local function createUI()
     MainGUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
     local Container = Instance.new("Frame")
-    Container.Size = UDim2.new(0, 340, 0, 110)
-    Container.Position = UDim2.new(0.5, -170, 0.80, 0)
+    Container.Size = UDim2.new(0, 380, 0, 140)
+    Container.Position = UDim2.new(0.5, -190, 0.80, 0)
     Container.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
     Container.BackgroundTransparency = 0.15
     Container.BorderSizePixel = 0
@@ -135,6 +215,7 @@ local function createUI()
     GlowCorner.CornerRadius = UDim.new(0, 14)
     GlowCorner.Parent = GlowBorder
     
+    -- Row 1: Speed
     local SpeedFrame = Instance.new("Frame")
     SpeedFrame.Size = UDim2.new(1, -20, 0, 25)
     SpeedFrame.Position = UDim2.new(0, 10, 0, 6)
@@ -143,26 +224,26 @@ local function createUI()
     
     local SpeedIcon = Instance.new("TextLabel")
     SpeedIcon.Size = UDim2.new(0, 25, 1, 0)
-    SpeedIcon.Position = UDim2.new(0, 0, 0, 0)
     SpeedIcon.BackgroundTransparency = 1
     SpeedIcon.Text = "⚡"
-    SpeedIcon.TextSize = 18
+    SpeedIcon.TextSize = 16
     SpeedIcon.TextColor3 = Color3.fromRGB(0, 200, 255)
     SpeedIcon.Font = Enum.Font.GothamBold
     SpeedIcon.TextXAlignment = Enum.TextXAlignment.Center
     SpeedIcon.Parent = SpeedFrame
     
     local SpeedLabel = Instance.new("TextLabel")
-    SpeedLabel.Size = UDim2.new(1, -35, 1, 0)
-    SpeedLabel.Position = UDim2.new(0, 35, 0, 0)
+    SpeedLabel.Size = UDim2.new(0, 100, 1, 0)
+    SpeedLabel.Position = UDim2.new(0, 30, 0, 0)
     SpeedLabel.BackgroundTransparency = 1
     SpeedLabel.Text = "SPEED: " .. Config.Speed
     SpeedLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
-    SpeedLabel.TextSize = 16
+    SpeedLabel.TextSize = 14
     SpeedLabel.Font = Enum.Font.GothamBold
     SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
     SpeedLabel.Parent = SpeedFrame
     
+    -- Row 2: Jump
     local JumpFrame = Instance.new("Frame")
     JumpFrame.Size = UDim2.new(1, -20, 0, 25)
     JumpFrame.Position = UDim2.new(0, 10, 0, 35)
@@ -171,73 +252,107 @@ local function createUI()
     
     local JumpIcon = Instance.new("TextLabel")
     JumpIcon.Size = UDim2.new(0, 25, 1, 0)
-    JumpIcon.Position = UDim2.new(0, 0, 0, 0)
     JumpIcon.BackgroundTransparency = 1
     JumpIcon.Text = "🦘"
-    JumpIcon.TextSize = 18
+    JumpIcon.TextSize = 16
     JumpIcon.TextColor3 = Color3.fromRGB(100, 200, 255)
     JumpIcon.Font = Enum.Font.GothamBold
     JumpIcon.TextXAlignment = Enum.TextXAlignment.Center
     JumpIcon.Parent = JumpFrame
     
     local JumpLabel = Instance.new("TextLabel")
-    JumpLabel.Size = UDim2.new(1, -35, 1, 0)
-    JumpLabel.Position = UDim2.new(0, 35, 0, 0)
+    JumpLabel.Size = UDim2.new(0, 140, 1, 0)
+    JumpLabel.Position = UDim2.new(0, 30, 0, 0)
     JumpLabel.BackgroundTransparency = 1
     JumpLabel.Text = "JUMP: " .. Config.JumpPower .. " | AIR: " .. Config.MaxAirJumps
     JumpLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-    JumpLabel.TextSize = 16
+    JumpLabel.TextSize = 14
     JumpLabel.Font = Enum.Font.GothamBold
     JumpLabel.TextXAlignment = Enum.TextXAlignment.Left
     JumpLabel.Parent = JumpFrame
     
-    local FPSFrame = Instance.new("Frame")
-    FPSFrame.Size = UDim2.new(0, 80, 0, 25)
-    FPSFrame.Position = UDim2.new(0, 10, 0, 64)
-    FPSFrame.BackgroundTransparency = 1
-    FPSFrame.Parent = Container
+    -- Row 3: FPS and Ping
+    local StatsFrame = Instance.new("Frame")
+    StatsFrame.Size = UDim2.new(1, -20, 0, 25)
+    StatsFrame.Position = UDim2.new(0, 10, 0, 64)
+    StatsFrame.BackgroundTransparency = 1
+    StatsFrame.Parent = Container
     
     local FPSIcon = Instance.new("TextLabel")
     FPSIcon.Size = UDim2.new(0, 25, 1, 0)
-    FPSIcon.Position = UDim2.new(0, 0, 0, 0)
     FPSIcon.BackgroundTransparency = 1
     FPSIcon.Text = "📊"
-    FPSIcon.TextSize = 16
+    FPSIcon.TextSize = 14
     FPSIcon.TextColor3 = Color3.fromRGB(255, 200, 100)
     FPSIcon.Font = Enum.Font.GothamBold
     FPSIcon.TextXAlignment = Enum.TextXAlignment.Center
-    FPSIcon.Parent = FPSFrame
+    FPSIcon.Parent = StatsFrame
     
     local FPSLabel = Instance.new("TextLabel")
-    FPSLabel.Size = UDim2.new(1, -35, 1, 0)
-    FPSLabel.Position = UDim2.new(0, 35, 0, 0)
+    FPSLabel.Size = UDim2.new(0, 80, 1, 0)
+    FPSLabel.Position = UDim2.new(0, 30, 0, 0)
     FPSLabel.BackgroundTransparency = 1
     FPSLabel.Text = "FPS: 60"
     FPSLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-    FPSLabel.TextSize = 16
+    FPSLabel.TextSize = 14
     FPSLabel.Font = Enum.Font.GothamBold
     FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
-    FPSLabel.Parent = FPSFrame
+    FPSLabel.Parent = StatsFrame
     
+    local PingIcon = Instance.new("TextLabel")
+    PingIcon.Size = UDim2.new(0, 25, 1, 0)
+    PingIcon.Position = UDim2.new(0, 120, 0, 0)
+    PingIcon.BackgroundTransparency = 1
+    PingIcon.Text = "📡"
+    PingIcon.TextSize = 14
+    PingIcon.TextColor3 = Color3.fromRGB(100, 255, 150)
+    PingIcon.Font = Enum.Font.GothamBold
+    PingIcon.TextXAlignment = Enum.TextXAlignment.Center
+    PingIcon.Parent = StatsFrame
+    
+    local PingLabel = Instance.new("TextLabel")
+    PingLabel.Size = UDim2.new(0, 80, 1, 0)
+    PingLabel.Position = UDim2.new(0, 150, 0, 0)
+    PingLabel.BackgroundTransparency = 1
+    PingLabel.Text = "PING: 0ms"
+    PingLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
+    PingLabel.TextSize = 14
+    PingLabel.Font = Enum.Font.GothamBold
+    PingLabel.TextXAlignment = Enum.TextXAlignment.Left
+    PingLabel.Parent = StatsFrame
+    
+    -- Status indicators
     local ESPStatus = Instance.new("TextLabel")
-    ESPStatus.Size = UDim2.new(0, 90, 0, 20)
-    ESPStatus.Position = UDim2.new(1, -95, 0, 6)
+    ESPStatus.Size = UDim2.new(0, 90, 0, 16)
+    ESPStatus.Position = UDim2.new(1, -100, 0, 6)
     ESPStatus.BackgroundTransparency = 1
-    ESPStatus.Text = "ESP ✓ (1km)"
+    ESPStatus.Text = "ESP ✓"
     ESPStatus.TextColor3 = Color3.fromRGB(0, 255, 100)
-    ESPStatus.TextSize = 14
+    ESPStatus.TextSize = 12
     ESPStatus.Font = Enum.Font.GothamBold
     ESPStatus.TextXAlignment = Enum.TextXAlignment.Right
     ESPStatus.Parent = Container
     
+    local BlockStatus = Instance.new("TextLabel")
+    BlockStatus.Size = UDim2.new(0, 90, 0, 16)
+    BlockStatus.Position = UDim2.new(1, -100, 0, 24)
+    BlockStatus.BackgroundTransparency = 1
+    BlockStatus.Text = "🛡️ AUTO BLOCK ✓"
+    BlockStatus.TextColor3 = Color3.fromRGB(100, 200, 255)
+    BlockStatus.TextSize = 12
+    BlockStatus.Font = Enum.Font.GothamBold
+    BlockStatus.TextXAlignment = Enum.TextXAlignment.Right
+    BlockStatus.Parent = Container
+    
+    -- Stop button
     local StopBtn = Instance.new("TextButton")
     StopBtn.Size = UDim2.new(0, 60, 0, 24)
-    StopBtn.Position = UDim2.new(1, -65, 1, -28)
+    StopBtn.Position = UDim2.new(1, -70, 1, -30)
     StopBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
     StopBtn.BackgroundTransparency = 0.2
     StopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     StopBtn.Text = "✕ STOP"
-    StopBtn.TextSize = 14
+    StopBtn.TextSize = 12
     StopBtn.Font = Enum.Font.GothamBold
     StopBtn.BorderSizePixel = 0
     StopBtn.Parent = Container
@@ -248,42 +363,50 @@ local function createUI()
     
     StopBtn.MouseEnter:Connect(function()
         TweenService:Create(StopBtn, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
-        TweenService:Create(StopBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 40, 40)}):Play()
     end)
     
     StopBtn.MouseLeave:Connect(function()
         TweenService:Create(StopBtn, TweenInfo.new(0.2), {BackgroundTransparency = 0.2}):Play()
-        TweenService:Create(StopBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(200, 30, 30)}):Play()
     end)
     
     StopBtn.MouseButton1Click:Connect(terminateScript)
     
+    -- Real-time updates
     task.spawn(function()
         while ScriptActive and MainGUI do
             pcall(function()
                 local fps = getFPS()
-                if fps > 0 then
-                    FPSLabel.Text = "FPS: " .. fps
-                    
-                    if fps >= 60 then
-                        FPSLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
-                    elseif fps >= 30 then
-                        FPSLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-                    else
-                        FPSLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-                    end
+                FPSLabel.Text = "FPS: " .. fps
+                
+                if fps >= 60 then
+                    FPSLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+                elseif fps >= 30 then
+                    FPSLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+                else
+                    FPSLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+                end
+                
+                local ping = getPing()
+                PingLabel.Text = "PING: " .. ping .. "ms"
+                
+                if ping <= 50 then
+                    PingLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+                elseif ping <= 100 then
+                    PingLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+                else
+                    PingLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
                 end
             end)
-            task.wait(0.5)
+            task.wait(0.3)
         end
     end)
     
     return {
-        Container = Container, 
-        SpeedLabel = SpeedLabel, 
-        JumpLabel = JumpLabel, 
+        Container = Container,
+        FPSLabel = FPSLabel,
+        PingLabel = PingLabel,
         ESPStatus = ESPStatus,
-        FPSLabel = FPSLabel
+        BlockStatus = BlockStatus
     }
 end
 
@@ -362,7 +485,7 @@ local function createHighlightESP(player)
         
         local teamColor = getTeamColor(player)
         
-        -- Create Highlight for player
+        -- Create Highlight
         local highlight = nil
         if Config.HIGHLIGHT_ENABLED then
             highlight = Instance.new("Highlight")
@@ -374,7 +497,7 @@ local function createHighlightESP(player)
             highlight.Parent = character
         end
         
-        -- Create Billboard GUI for name tag and health bar
+        -- Create Billboard GUI
         local billboard = Instance.new("BillboardGui")
         billboard.Adornee = head
         billboard.Size = UDim2.new(0, 200, 0, 80)
@@ -384,7 +507,6 @@ local function createHighlightESP(player)
         billboard.Parent = character
         billboard.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         
-        -- Container for all labels
         local mainContainer = Instance.new("Frame", billboard)
         mainContainer.Size = UDim2.new(1, 0, 1, 0)
         mainContainer.BackgroundTransparency = 1
@@ -526,32 +648,26 @@ task.spawn(function()
                     continue
                 end
                 
-                -- Update billboard attachment
                 if espData.Billboard then
                     espData.Billboard.Adornee = head
                 end
                 
-                -- Update highlight parent
                 if espData.Highlight then
                     espData.Highlight.Parent = character
                 end
                 
-                -- Check distance - 1000m max
                 local dist = (Camera.CFrame.Position - rootPart.Position).Magnitude
                 local isInRange = dist <= Config.MaxESPDistance
                 
-                -- Show/hide based on range and ESP enabled
                 if isInRange and Config.ESPEnabled then
                     if espData.Highlight then espData.Highlight.Enabled = true end
                     if espData.Billboard then espData.Billboard.Enabled = true end
                     
-                    -- Update health bar
                     local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
                     if espData.HealthBarFill then
                         espData.HealthBarFill.Size = UDim2.new(healthPercent, 0, 1, 0)
                     end
                     
-                    -- Update health color based on percentage
                     if healthPercent > 0.5 then
                         if espData.HealthBarFill then espData.HealthBarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0) end
                     elseif healthPercent > 0.25 then
@@ -560,12 +676,10 @@ task.spawn(function()
                         if espData.HealthBarFill then espData.HealthBarFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0) end
                     end
                     
-                    -- Update health text
                     if espData.HealthLabel then
                         espData.HealthLabel.Text = "HP: " .. math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth)
                     end
                     
-                    -- Update distance
                     if espData.DistanceLabel and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                         local playerPos = LocalPlayer.Character.HumanoidRootPart.Position
                         local targetPos = rootPart.Position
@@ -573,7 +687,6 @@ task.spawn(function()
                         
                         espData.DistanceLabel.Text = "Distance: " .. distance .. "m"
                         
-                        -- Change distance color based on proximity
                         if distance < 50 then
                             espData.DistanceLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                         elseif distance < 150 then
@@ -646,17 +759,18 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 print("")
-print("╔══════════════════════════════════════╗")
-print("║     UNIVERSAL ESP SCRIPT v1.0       ║")
-print("╠══════════════════════════════════════╣")
-print("║  ⚡ Speed: " .. Config.Speed .. "                      ║")
-print("║  🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps .. "   ║")
-print("║  👁️  HIGHLIGHT ESP (1km)             ║")
-print("║  📊 FPS: ENABLED                     ║")
-print("║  📍 Scan Rate: 0.1s                  ║")
-print("║  📏 Max Distance: 1000m              ║")
-print("╠══════════════════════════════════════╣")
-print("║  Works on ANY Roblox Game!          ║")
-print("║  Click 'STOP' to terminate          ║")
-print("╚══════════════════════════════════════╝")
+print("╔═══════════════════════════════════════════╗")
+print("║   UNIVERSAL ESP SCRIPT v2.0              ║")
+print("╠═══════════════════════════════════════════╣")
+print("║  ⚡ Speed: " .. Config.Speed .. "                          ║")
+print("║  🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps .. "           ║")
+print("║  👁️  ESP: HIGHLIGHT (2km Range)          ║")
+print("║  📊 FPS: REAL-TIME UPDATE                ║")
+print("║  📡 PING: LIVE DISPLAY                   ║")
+print("║  🛡️  AUTO BLOCK: ENABLED                 ║")
+print("╠═══════════════════════════════════════════╣")
+print("║  Works on ANY Roblox Game!               ║")
+print("║  Auto-blocks incoming attacks!           ║")
+print("║  Click 'STOP' to terminate               ║")
+print("╚═══════════════════════════════════════════╝")
 print("")
