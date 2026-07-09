@@ -1,7 +1,7 @@
 --[[
-    UNIVERSAL ESP SCRIPT
+    SIMPLE ESP SCRIPT
     Highlight-based player detection + Speed Boost + Air Jump + FPS Counter
-    Works on any Roblox game
+    No external links, no topbar, minimal GUI
 ]]
 
 repeat wait() until game:IsLoaded() and game.Players.LocalPlayer
@@ -16,6 +16,7 @@ local Lighting = game:GetService("Lighting")
 local Stats = game:GetService("Stats")
 local Workspace = game:GetService("Workspace")
 local Teams = game:GetService("Teams")
+local GuiService = game:GetService("GuiService")
 
 -- =============================================
 -- CONFIGURATION
@@ -73,7 +74,7 @@ local function terminateScript()
     end
     espConnections = {}
     
-    print("✓ Universal ESP Script Terminated")
+    print("✓ ESP Script Terminated")
 end
 
 -- =============================================
@@ -101,149 +102,117 @@ local function getTeamColor(player)
 end
 
 -- =============================================
--- CREATE MODERN UI
+-- CREATE MINIMAL GUI
 -- =============================================
 local function createUI()
+    -- Create main GUI container - positioned at bottom center
     MainGUI = Instance.new("ScreenGui")
-    MainGUI.Name = "UniversalESPGUI"
+    MainGUI.Name = "SimpleESPUI"
     MainGUI.ResetOnSpawn = false
     MainGUI.Parent = game.CoreGui
     MainGUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
+    -- Main container - simple dark panel
     local Container = Instance.new("Frame")
-    Container.Size = UDim2.new(0, 340, 0, 110)
-    Container.Position = UDim2.new(0.5, -170, 0.80, 0)
-    Container.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-    Container.BackgroundTransparency = 0.15
-    Container.BorderSizePixel = 0
-    Container.ClipsDescendants = true
+    Container.Size = UDim2.new(0, 300, 0, 90)
+    Container.Position = UDim2.new(0.5, -150, 1, -100)
+    Container.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    Container.BackgroundTransparency = 0.1
+    Container.BorderSizePixel = 1
+    Container.BorderColor3 = Color3.fromRGB(50, 50, 50)
     Container.Parent = MainGUI
     
     local ContainerCorner = Instance.new("UICorner")
-    ContainerCorner.CornerRadius = UDim.new(0, 12)
+    ContainerCorner.CornerRadius = UDim.new(0, 8)
     ContainerCorner.Parent = Container
     
-    local GlowBorder = Instance.new("Frame")
-    GlowBorder.Size = UDim2.new(1, 4, 1, 4)
-    GlowBorder.Position = UDim2.new(0, -2, 0, -2)
-    GlowBorder.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-    GlowBorder.BackgroundTransparency = 0.8
-    GlowBorder.BorderSizePixel = 0
-    GlowBorder.Parent = Container
-    
-    local GlowCorner = Instance.new("UICorner")
-    GlowCorner.CornerRadius = UDim.new(0, 14)
-    GlowCorner.Parent = GlowBorder
-    
-    local SpeedFrame = Instance.new("Frame")
-    SpeedFrame.Size = UDim2.new(1, -20, 0, 25)
-    SpeedFrame.Position = UDim2.new(0, 10, 0, 6)
-    SpeedFrame.BackgroundTransparency = 1
-    SpeedFrame.Parent = Container
-    
-    local SpeedIcon = Instance.new("TextLabel")
-    SpeedIcon.Size = UDim2.new(0, 25, 1, 0)
-    SpeedIcon.Position = UDim2.new(0, 0, 0, 0)
-    SpeedIcon.BackgroundTransparency = 1
-    SpeedIcon.Text = "⚡"
-    SpeedIcon.TextSize = 18
-    SpeedIcon.TextColor3 = Color3.fromRGB(0, 200, 255)
-    SpeedIcon.Font = Enum.Font.GothamBold
-    SpeedIcon.TextXAlignment = Enum.TextXAlignment.Center
-    SpeedIcon.Parent = SpeedFrame
-    
+    -- Speed label
     local SpeedLabel = Instance.new("TextLabel")
-    SpeedLabel.Size = UDim2.new(1, -35, 1, 0)
-    SpeedLabel.Position = UDim2.new(0, 35, 0, 0)
+    SpeedLabel.Size = UDim2.new(0, 100, 0, 25)
+    SpeedLabel.Position = UDim2.new(0.05, 0, 0.1, 0)
     SpeedLabel.BackgroundTransparency = 1
-    SpeedLabel.Text = "SPEED: " .. Config.Speed
+    SpeedLabel.Text = "⚡ " .. Config.Speed
     SpeedLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
     SpeedLabel.TextSize = 16
     SpeedLabel.Font = Enum.Font.GothamBold
     SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
-    SpeedLabel.Parent = SpeedFrame
+    SpeedLabel.Parent = Container
     
-    local JumpFrame = Instance.new("Frame")
-    JumpFrame.Size = UDim2.new(1, -20, 0, 25)
-    JumpFrame.Position = UDim2.new(0, 10, 0, 35)
-    JumpFrame.BackgroundTransparency = 1
-    JumpFrame.Parent = Container
-    
-    local JumpIcon = Instance.new("TextLabel")
-    JumpIcon.Size = UDim2.new(0, 25, 1, 0)
-    JumpIcon.Position = UDim2.new(0, 0, 0, 0)
-    JumpIcon.BackgroundTransparency = 1
-    JumpIcon.Text = "🦘"
-    JumpIcon.TextSize = 18
-    JumpIcon.TextColor3 = Color3.fromRGB(100, 200, 255)
-    JumpIcon.Font = Enum.Font.GothamBold
-    JumpIcon.TextXAlignment = Enum.TextXAlignment.Center
-    JumpIcon.Parent = JumpFrame
-    
+    -- Jump label
     local JumpLabel = Instance.new("TextLabel")
-    JumpLabel.Size = UDim2.new(1, -35, 1, 0)
-    JumpLabel.Position = UDim2.new(0, 35, 0, 0)
+    JumpLabel.Size = UDim2.new(0, 120, 0, 25)
+    JumpLabel.Position = UDim2.new(0.37, 0, 0.1, 0)
     JumpLabel.BackgroundTransparency = 1
-    JumpLabel.Text = "JUMP: " .. Config.JumpPower .. " | AIR: " .. Config.MaxAirJumps
+    JumpLabel.Text = "🦘 " .. Config.JumpPower
     JumpLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
     JumpLabel.TextSize = 16
     JumpLabel.Font = Enum.Font.GothamBold
     JumpLabel.TextXAlignment = Enum.TextXAlignment.Left
-    JumpLabel.Parent = JumpFrame
+    JumpLabel.Parent = Container
     
-    local FPSFrame = Instance.new("Frame")
-    FPSFrame.Size = UDim2.new(0, 80, 0, 25)
-    FPSFrame.Position = UDim2.new(0, 10, 0, 64)
-    FPSFrame.BackgroundTransparency = 1
-    FPSFrame.Parent = Container
+    -- Air jumps label
+    local AirLabel = Instance.new("TextLabel")
+    AirLabel.Size = UDim2.new(0, 70, 0, 25)
+    AirLabel.Position = UDim2.new(0.67, 0, 0.1, 0)
+    AirLabel.BackgroundTransparency = 1
+    AirLabel.Text = "🔄 " .. Config.MaxAirJumps
+    AirLabel.TextColor3 = Color3.fromRGB(200, 200, 100)
+    AirLabel.TextSize = 16
+    AirLabel.Font = Enum.Font.GothamBold
+    AirLabel.TextXAlignment = Enum.TextXAlignment.Left
+    AirLabel.Parent = Container
     
-    local FPSIcon = Instance.new("TextLabel")
-    FPSIcon.Size = UDim2.new(0, 25, 1, 0)
-    FPSIcon.Position = UDim2.new(0, 0, 0, 0)
-    FPSIcon.BackgroundTransparency = 1
-    FPSIcon.Text = "📊"
-    FPSIcon.TextSize = 16
-    FPSIcon.TextColor3 = Color3.fromRGB(255, 200, 100)
-    FPSIcon.Font = Enum.Font.GothamBold
-    FPSIcon.TextXAlignment = Enum.TextXAlignment.Center
-    FPSIcon.Parent = FPSFrame
-    
+    -- FPS label
     local FPSLabel = Instance.new("TextLabel")
-    FPSLabel.Size = UDim2.new(1, -35, 1, 0)
-    FPSLabel.Position = UDim2.new(0, 35, 0, 0)
+    FPSLabel.Size = UDim2.new(0, 80, 0, 25)
+    FPSLabel.Position = UDim2.new(0.05, 0, 0.55, 0)
     FPSLabel.BackgroundTransparency = 1
     FPSLabel.Text = "FPS: 60"
     FPSLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-    FPSLabel.TextSize = 16
+    FPSLabel.TextSize = 15
     FPSLabel.Font = Enum.Font.GothamBold
     FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
-    FPSLabel.Parent = FPSFrame
+    FPSLabel.Parent = Container
     
-    local ESPStatus = Instance.new("TextLabel")
-    ESPStatus.Size = UDim2.new(0, 90, 0, 20)
-    ESPStatus.Position = UDim2.new(1, -95, 0, 6)
-    ESPStatus.BackgroundTransparency = 1
-    ESPStatus.Text = "ESP ✓ (1km)"
-    ESPStatus.TextColor3 = Color3.fromRGB(0, 255, 100)
-    ESPStatus.TextSize = 14
-    ESPStatus.Font = Enum.Font.GothamBold
-    ESPStatus.TextXAlignment = Enum.TextXAlignment.Right
-    ESPStatus.Parent = Container
+    -- Player count label
+    local PlayerCountLabel = Instance.new("TextLabel")
+    PlayerCountLabel.Size = UDim2.new(0, 100, 0, 25)
+    PlayerCountLabel.Position = UDim2.new(0.37, 0, 0.55, 0)
+    PlayerCountLabel.BackgroundTransparency = 1
+    PlayerCountLabel.Text = "👤 " .. #Players:GetPlayers()
+    PlayerCountLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    PlayerCountLabel.TextSize = 15
+    PlayerCountLabel.Font = Enum.Font.GothamBold
+    PlayerCountLabel.TextXAlignment = Enum.TextXAlignment.Left
+    PlayerCountLabel.Parent = Container
     
+    -- Status indicator (simple dot)
+    local StatusDot = Instance.new("Frame")
+    StatusDot.Size = UDim2.new(0, 10, 0, 10)
+    StatusDot.Position = UDim2.new(1, -20, 0.5, -5)
+    StatusDot.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    StatusDot.BorderSizePixel = 0
+    StatusDot.Parent = Container
+    
+    local DotCorner = Instance.new("UICorner")
+    DotCorner.CornerRadius = UDim.new(0, 5)
+    DotCorner.Parent = StatusDot
+    
+    -- Stop button (small X)
     local StopBtn = Instance.new("TextButton")
-    StopBtn.Size = UDim2.new(0, 60, 0, 24)
-    StopBtn.Position = UDim2.new(1, -65, 1, -28)
+    StopBtn.Size = UDim2.new(0, 25, 0, 25)
+    StopBtn.Position = UDim2.new(1, -30, 0.05, 0)
     StopBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
-    StopBtn.BackgroundTransparency = 0.2
+    StopBtn.BackgroundTransparency = 0.3
     StopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    StopBtn.Text = "✕ STOP"
-    StopBtn.TextSize = 14
+    StopBtn.Text = "✕"
+    StopBtn.TextSize = 16
     StopBtn.Font = Enum.Font.GothamBold
     StopBtn.BorderSizePixel = 0
     StopBtn.Parent = Container
     
     local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 6)
+    BtnCorner.CornerRadius = UDim.new(0, 4)
     BtnCorner.Parent = StopBtn
     
     StopBtn.MouseEnter:Connect(function()
@@ -252,12 +221,13 @@ local function createUI()
     end)
     
     StopBtn.MouseLeave:Connect(function()
-        TweenService:Create(StopBtn, TweenInfo.new(0.2), {BackgroundTransparency = 0.2}):Play()
+        TweenService:Create(StopBtn, TweenInfo.new(0.2), {BackgroundTransparency = 0.3}):Play()
         TweenService:Create(StopBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(200, 30, 30)}):Play()
     end)
     
     StopBtn.MouseButton1Click:Connect(terminateScript)
     
+    -- Update FPS and player count
     task.spawn(function()
         while ScriptActive and MainGUI do
             pcall(function()
@@ -273,17 +243,18 @@ local function createUI()
                         FPSLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
                     end
                 end
+                
+                PlayerCountLabel.Text = "👤 " .. #Players:GetPlayers()
             end)
-            task.wait(0.5)
+            task.wait(1)
         end
     end)
     
     return {
-        Container = Container, 
-        SpeedLabel = SpeedLabel, 
-        JumpLabel = JumpLabel, 
-        ESPStatus = ESPStatus,
-        FPSLabel = FPSLabel
+        Container = Container,
+        FPSLabel = FPSLabel,
+        PlayerCountLabel = PlayerCountLabel,
+        StatusDot = StatusDot
     }
 end
 
@@ -368,16 +339,16 @@ local function createHighlightESP(player)
             highlight = Instance.new("Highlight")
             highlight.FillColor = teamColor
             highlight.OutlineColor = Color3.new(1, 1, 1)
-            highlight.FillTransparency = 0.3
+            highlight.FillTransparency = 0.35
             highlight.OutlineTransparency = 0
             highlight.Enabled = true
             highlight.Parent = character
         end
         
-        -- Create Billboard GUI for name tag and health bar
+        -- Create Billboard GUI for name tag
         local billboard = Instance.new("BillboardGui")
         billboard.Adornee = head
-        billboard.Size = UDim2.new(0, 200, 0, 80)
+        billboard.Size = UDim2.new(0, 200, 0, 70)
         billboard.StudsOffset = Vector3.new(0, 3, 0)
         billboard.AlwaysOnTop = true
         billboard.Enabled = true
@@ -392,7 +363,7 @@ local function createHighlightESP(player)
         
         -- Name label
         local nameLabel = Instance.new("TextLabel", mainContainer)
-        nameLabel.Size = UDim2.new(1, 0, 0, 16)
+        nameLabel.Size = UDim2.new(1, 0, 0, 18)
         nameLabel.Position = UDim2.new(0, 0, 0, 0)
         nameLabel.BackgroundTransparency = 1
         nameLabel.Text = player.Name
@@ -405,8 +376,8 @@ local function createHighlightESP(player)
         
         -- Health bar background
         local healthBarBg = Instance.new("Frame", mainContainer)
-        healthBarBg.Size = UDim2.new(0.9, 0, 0, 12)
-        healthBarBg.Position = UDim2.new(0.05, 0, 0, 18)
+        healthBarBg.Size = UDim2.new(0.9, 0, 0, 10)
+        healthBarBg.Position = UDim2.new(0.05, 0, 0.3, 0)
         healthBarBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         healthBarBg.BorderSizePixel = 1
         healthBarBg.BorderColor3 = Color3.fromRGB(0, 0, 0)
@@ -421,27 +392,14 @@ local function createHighlightESP(player)
         local healthFillCorner = Instance.new("UICorner", healthBarFill)
         healthFillCorner.CornerRadius = UDim.new(0, 2)
         
-        -- Health text
-        local healthLabel = Instance.new("TextLabel", mainContainer)
-        healthLabel.Size = UDim2.new(1, 0, 0, 12)
-        healthLabel.Position = UDim2.new(0, 0, 0, 20)
-        healthLabel.BackgroundTransparency = 1
-        healthLabel.Text = "HP: 100/100"
-        healthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        healthLabel.TextSize = 10
-        healthLabel.Font = Enum.Font.Gotham
-        healthLabel.TextXAlignment = Enum.TextXAlignment.Center
-        healthLabel.TextStrokeTransparency = 0.5
-        healthLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        
         -- Distance label
         local distanceLabel = Instance.new("TextLabel", mainContainer)
         distanceLabel.Size = UDim2.new(1, 0, 0, 14)
-        distanceLabel.Position = UDim2.new(0, 0, 0, 62)
+        distanceLabel.Position = UDim2.new(0, 0, 0.7, 0)
         distanceLabel.BackgroundTransparency = 1
-        distanceLabel.Text = "Distance: 0m"
+        distanceLabel.Text = "0m"
         distanceLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
-        distanceLabel.TextSize = 11
+        distanceLabel.TextSize = 12
         distanceLabel.Font = Enum.Font.GothamBold
         distanceLabel.TextXAlignment = Enum.TextXAlignment.Center
         distanceLabel.TextStrokeTransparency = 0.5
@@ -452,7 +410,6 @@ local function createHighlightESP(player)
             Highlight = highlight,
             NameLabel = nameLabel,
             HealthBarFill = healthBarFill,
-            HealthLabel = healthLabel,
             DistanceLabel = distanceLabel,
             Humanoid = humanoid,
             RootPart = rootPart
@@ -536,7 +493,7 @@ task.spawn(function()
                     espData.Highlight.Parent = character
                 end
                 
-                -- Check distance - 1000m max
+                -- Check distance
                 local dist = (Camera.CFrame.Position - rootPart.Position).Magnitude
                 local isInRange = dist <= Config.MaxESPDistance
                 
@@ -560,18 +517,13 @@ task.spawn(function()
                         if espData.HealthBarFill then espData.HealthBarFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0) end
                     end
                     
-                    -- Update health text
-                    if espData.HealthLabel then
-                        espData.HealthLabel.Text = "HP: " .. math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth)
-                    end
-                    
                     -- Update distance
                     if espData.DistanceLabel and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                         local playerPos = LocalPlayer.Character.HumanoidRootPart.Position
                         local targetPos = rootPart.Position
                         local distance = math.floor((playerPos - targetPos).Magnitude)
                         
-                        espData.DistanceLabel.Text = "Distance: " .. distance .. "m"
+                        espData.DistanceLabel.Text = distance .. "m"
                         
                         -- Change distance color based on proximity
                         if distance < 50 then
@@ -645,18 +597,5 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
-print("")
-print("╔══════════════════════════════════════╗")
-print("║     UNIVERSAL ESP SCRIPT v1.0       ║")
-print("╠══════════════════════════════════════╣")
-print("║  ⚡ Speed: " .. Config.Speed .. "                      ║")
-print("║  🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps .. "   ║")
-print("║  👁️  HIGHLIGHT ESP (1km)             ║")
-print("║  📊 FPS: ENABLED                     ║")
-print("║  📍 Scan Rate: 0.1s                  ║")
-print("║  📏 Max Distance: 1000m              ║")
-print("╠══════════════════════════════════════╣")
-print("║  Works on ANY Roblox Game!          ║")
-print("║  Click 'STOP' to terminate          ║")
-print("╚══════════════════════════════════════╝")
-print("")
+-- Simple startup message
+print("✓ ESP Active | Speed: " .. Config.Speed .. " | Jump: " .. Config.JumpPower .. " | Air Jumps: " .. Config.MaxAirJumps)
