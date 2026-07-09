@@ -1,7 +1,7 @@
 --[[
     UNIVERSAL ESP SCRIPT
     Highlight-based player detection + Speed Boost + Air Jump + FPS Counter
-    Clean GUI with Minimize to Text - No topbar, no external links
+    Tabbed GUI with Minimize - NO TOPBAR
 ]]
 
 repeat wait() until game:IsLoaded() and game.Players.LocalPlayer
@@ -16,7 +16,6 @@ local Lighting = game:GetService("Lighting")
 local Stats = game:GetService("Stats")
 local Workspace = game:GetService("Workspace")
 local Teams = game:GetService("Teams")
-local VirtualUser = game:GetService("VirtualUser")
 local GuiService = game:GetService("GuiService")
 
 -- Detect platform
@@ -34,7 +33,6 @@ local Config = {
     ScanInterval = 0.1,
     TEXT_SIZE = 18,
     TEXT_FONT = Enum.Font.GothamBold,
-    TEXT_OUTLINE = true,
     HIGHLIGHT_ENABLED = true,
     MaxESPDistance = 2000,
     Minimized = false
@@ -49,8 +47,6 @@ local isGrounded = false
 local ESPObjects = {}
 local espConnections = {}
 local MainGUI = nil
-local fpsCounter = 0
-local fpsUpdateTime = 0
 local CurrentBounty = "Searching..."
 
 -- Clean up old GUI
@@ -111,25 +107,6 @@ local function scanBounty()
                 end
             end
         end
-        
-        if not bounty then
-            local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-            if playerGui then
-                for _, child in pairs(playerGui:GetDescendants()) do
-                    if child:IsA("TextLabel") or child:IsA("TextButton") then
-                        local text = child.Text or ""
-                        local textLower = string.lower(text)
-                        if string.find(textLower, "bounty") then
-                            local number = string.match(text, "[%d,]+")
-                            if number then
-                                bounty = number
-                                break
-                            end
-                        end
-                    end
-                end
-            end
-        end
     end)
     
     return bounty
@@ -169,25 +146,23 @@ local function terminateScript()
 end
 
 -- =============================================
--- CREATE MODERN UI (Sailor Piece Style)
+-- CREATE TABBED GUI (SAILOR PIECE STYLE)
 -- =============================================
 local function createUI()
-    -- Main GUI
     MainGUI = Instance.new("ScreenGui")
     MainGUI.Name = "UniversalESPUI"
     MainGUI.ResetOnSpawn = false
     MainGUI.Parent = game.CoreGui
     MainGUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
-    -- Adjust size for mobile
     local mainWidth = isMobile and 380 or 420
-    local mainHeight = isMobile and 280 or 300
+    local mainHeight = isMobile and 300 or 320
     
     -- Main Container
     local Main = Instance.new("Frame")
     Main.Name = "MainFrame"
     Main.Size = UDim2.new(0, mainWidth, 0, mainHeight)
-    Main.Position = isMobile and UDim2.new(0.5, -mainWidth/2, 0.5, -mainHeight/2) or UDim2.new(0.5, -210, 0.5, -150)
+    Main.Position = isMobile and UDim2.new(0.5, -mainWidth/2, 0.5, -mainHeight/2) or UDim2.new(0.5, -210, 0.5, -160)
     Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     Main.BorderSizePixel = 0
     Main.ClipsDescendants = true
@@ -197,15 +172,15 @@ local function createUI()
     UICorner.CornerRadius = UDim.new(0, 6)
     UICorner.Parent = Main
     
-    -- Minimize Text Button (tap to restore)
+    -- Minimize Text Button
     local MinimizeText = Instance.new("TextButton")
     MinimizeText.Name = "MinimizeText"
     MinimizeText.Size = UDim2.new(0, isMobile and 200 or 180, 0, isMobile and 45 or 38)
     MinimizeText.Position = UDim2.new(0, 10, 0, isMobile and 120 or 80)
     MinimizeText.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     MinimizeText.BorderSizePixel = 0
-    MinimizeText.TextColor3 = Color3.fromRGB(255, 200, 100)
-    MinimizeText.Text = "📡 Universal ESP"
+    MinimizeText.TextColor3 = Color3.fromRGB(0, 200, 255)
+    MinimizeText.Text = "👁️ Universal ESP"
     MinimizeText.Font = Enum.Font.GothamBold
     MinimizeText.TextSize = isMobile and 16 or 14
     MinimizeText.AutoButtonColor = false
@@ -291,6 +266,27 @@ local function createUI()
     local MinCorner = Instance.new("UICorner")
     MinCorner.CornerRadius = UDim.new(0, 4)
     MinCorner.Parent = MinBtn
+    
+    -- Close Button
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, isMobile and 32 or 28, 0, isMobile and 32 or 28)
+    CloseBtn.Position = UDim2.new(1, isMobile and -8 or -3, 0, isMobile and 2 or 2)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    CloseBtn.BorderSizePixel = 0
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 50, 50)
+    CloseBtn.Text = "✕"
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.TextSize = isMobile and 14 or 12
+    CloseBtn.AutoButtonColor = false
+    CloseBtn.Active = true
+    CloseBtn.ZIndex = 10
+    CloseBtn.Parent = TitleBar
+    
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 4)
+    CloseCorner.Parent = CloseBtn
+    
+    CloseBtn.Activated:Connect(terminateScript)
     
     -- Content Container
     local ContentContainer = Instance.new("Frame")
@@ -493,7 +489,6 @@ local function createUI()
         end
         
         switch.Activated:Connect(toggleSwitch)
-        
         return bg
     end
     
@@ -509,30 +504,6 @@ local function createUI()
         label.TextSize = 10
         label.Parent = parent
         return label
-    end
-    
-    local function CreateButton(parent, title, yPos, callback)
-        local btnSize = isMobile and 36 or 32
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -30, 0, btnSize)
-        btn.Position = UDim2.new(0, 15, 0, yPos)
-        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        btn.BorderSizePixel = 0
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.Text = title
-        btn.Font = Enum.Font.GothamBold
-        btn.TextSize = isMobile and 10 or 11
-        btn.AutoButtonColor = false
-        btn.Active = true
-        btn.ZIndex = 10
-        btn.Parent = parent
-        
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(0, 4)
-        btnCorner.Parent = btn
-        
-        btn.Activated:Connect(callback)
-        return btn
     end
     
     -- =============================================
@@ -664,10 +635,33 @@ local function createUI()
     CreateInfoLabel(SettingsPage, "Air Jumps: " .. Config.MaxAirJumps, 74, Color3.fromRGB(200, 200, 100))
     CreateInfoLabel(SettingsPage, "ESP Range: " .. Config.MaxESPDistance .. "m", 94, Color3.fromRGB(255, 200, 0))
     
-    CreateSection(SettingsPage, "TERMINATE", 126)
+    CreateSection(SettingsPage, "CONTROLS", 126)
     
-    CreateButton(SettingsPage, "⚠️ TERMINATE SCRIPT", 150, function()
-        terminateScript()
+    -- Toggle ESP button
+    local ToggleESP = Instance.new("TextButton")
+    ToggleESP.Size = UDim2.new(1, -30, 0, isMobile and 30 or 26)
+    ToggleESP.Position = UDim2.new(0, 15, 0, 150)
+    ToggleESP.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    ToggleESP.BorderSizePixel = 0
+    ToggleESP.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleESP.Text = "Toggle ESP: ON"
+    ToggleESP.Font = Enum.Font.GothamBold
+    ToggleESP.TextSize = isMobile and 10 or 11
+    ToggleESP.AutoButtonColor = false
+    ToggleESP.Active = true
+    ToggleESP.ZIndex = 10
+    ToggleESP.Parent = SettingsPage
+    
+    local ToggleCorner = Instance.new("UICorner")
+    ToggleCorner.CornerRadius = UDim.new(0, 4)
+    ToggleCorner.Parent = ToggleESP
+    
+    ToggleESP.Activated:Connect(function()
+        Config.ESPEnabled = not Config.ESPEnabled
+        ToggleESP.Text = Config.ESPEnabled and "Toggle ESP: ON" or "Toggle ESP: OFF"
+        ToggleESP.BackgroundColor3 = Config.ESPEnabled and Color3.fromRGB(40, 40, 40) or Color3.fromRGB(60, 30, 30)
+        ESPStatus.Text = Config.ESPEnabled and "● ESP Active (1km)" or "● ESP Disabled"
+        ESPStatus.TextColor3 = Config.ESPEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(150, 150, 150)
     end)
     
     -- =============================================
@@ -688,7 +682,7 @@ local function createUI()
     MinBtn.Activated:Connect(showText)
     MinimizeText.Activated:Connect(showMain)
     
-    -- Text button: tap to restore, drag to move
+    -- Text button drag
     local textDragging = false
     local textDragStart
     local textStartPos
@@ -762,7 +756,8 @@ local function createUI()
         PingDisplay = PingDisplay,
         PlayerCountDisplay = PlayerCountDisplay,
         PlayerCountLabel = PlayerCountLabel,
-        PlayerBountyValue = PlayerBountyValue
+        PlayerBountyValue = PlayerBountyValue,
+        ESPStatus = ESPStatus
     }
 end
 
@@ -841,7 +836,6 @@ local function createHighlightESP(player)
         
         local teamColor = getTeamColor(player)
         
-        -- Create Highlight for player
         local highlight = nil
         if Config.HIGHLIGHT_ENABLED then
             highlight = Instance.new("Highlight")
@@ -853,7 +847,6 @@ local function createHighlightESP(player)
             highlight.Parent = character
         end
         
-        -- Create Billboard GUI for name tag
         local billboard = Instance.new("BillboardGui")
         billboard.Adornee = head
         billboard.Size = UDim2.new(0, 200, 0, 70)
@@ -863,13 +856,11 @@ local function createHighlightESP(player)
         billboard.Parent = character
         billboard.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         
-        -- Container for all labels
         local mainContainer = Instance.new("Frame", billboard)
         mainContainer.Size = UDim2.new(1, 0, 1, 0)
         mainContainer.BackgroundTransparency = 1
         mainContainer.BorderSizePixel = 0
         
-        -- Name label
         local nameLabel = Instance.new("TextLabel", mainContainer)
         nameLabel.Size = UDim2.new(1, 0, 0, 18)
         nameLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -882,7 +873,6 @@ local function createHighlightESP(player)
         nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         nameLabel.TextXAlignment = Enum.TextXAlignment.Center
         
-        -- Health bar background
         local healthBarBg = Instance.new("Frame", mainContainer)
         healthBarBg.Size = UDim2.new(0.9, 0, 0, 10)
         healthBarBg.Position = UDim2.new(0.05, 0, 0.3, 0)
@@ -892,7 +882,6 @@ local function createHighlightESP(player)
         local healthBgCorner = Instance.new("UICorner", healthBarBg)
         healthBgCorner.CornerRadius = UDim.new(0, 2)
         
-        -- Health bar fill
         local healthBarFill = Instance.new("Frame", healthBarBg)
         healthBarFill.Size = UDim2.new(1, 0, 1, 0)
         healthBarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
@@ -900,7 +889,6 @@ local function createHighlightESP(player)
         local healthFillCorner = Instance.new("UICorner", healthBarFill)
         healthFillCorner.CornerRadius = UDim.new(0, 2)
         
-        -- Distance label
         local distanceLabel = Instance.new("TextLabel", mainContainer)
         distanceLabel.Size = UDim2.new(1, 0, 0, 14)
         distanceLabel.Position = UDim2.new(0, 0, 0.7, 0)
@@ -991,32 +979,26 @@ task.spawn(function()
                     continue
                 end
                 
-                -- Update billboard attachment
                 if espData.Billboard then
                     espData.Billboard.Adornee = head
                 end
                 
-                -- Update highlight parent
                 if espData.Highlight then
                     espData.Highlight.Parent = character
                 end
                 
-                -- Check distance
                 local dist = (Camera.CFrame.Position - rootPart.Position).Magnitude
                 local isInRange = dist <= Config.MaxESPDistance
                 
-                -- Show/hide based on range and ESP enabled
                 if isInRange and Config.ESPEnabled then
                     if espData.Highlight then espData.Highlight.Enabled = true end
                     if espData.Billboard then espData.Billboard.Enabled = true end
                     
-                    -- Update health bar
                     local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
                     if espData.HealthBarFill then
                         espData.HealthBarFill.Size = UDim2.new(healthPercent, 0, 1, 0)
                     end
                     
-                    -- Update health color based on percentage
                     if healthPercent > 0.5 then
                         if espData.HealthBarFill then espData.HealthBarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0) end
                     elseif healthPercent > 0.25 then
@@ -1025,7 +1007,6 @@ task.spawn(function()
                         if espData.HealthBarFill then espData.HealthBarFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0) end
                     end
                     
-                    -- Update distance
                     if espData.DistanceLabel and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                         local playerPos = LocalPlayer.Character.HumanoidRootPart.Position
                         local targetPos = rootPart.Position
@@ -1033,7 +1014,6 @@ task.spawn(function()
                         
                         espData.DistanceLabel.Text = distance .. "m"
                         
-                        -- Change distance color based on proximity
                         if distance < 50 then
                             espData.DistanceLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
                         elseif distance < 150 then
@@ -1057,6 +1037,7 @@ end)
 
 local UI = createUI()
 
+-- Apply stats loop
 task.spawn(function()
     while ScriptActive do
         applyStats()
@@ -1122,13 +1103,14 @@ end)
 task.spawn(function()
     while ScriptActive do
         local bounty = scanBounty()
-        if bounty and UI and UI.PlayerBountyValue then
-            UI.PlayerBountyValue.Text = bounty
+        if UI and UI.PlayerBountyValue then
+            UI.PlayerBountyValue.Text = bounty or "Not found"
         end
         task.wait(3)
     end
 end)
 
+-- Initialize ESP for existing players
 task.wait(1)
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
@@ -1177,5 +1159,6 @@ print("╠═══════════════════════�
 print("║  Works on ANY Roblox Game!          ║")
 print("║  Click '—' to minimize to text      ║")
 print("║  Tap text to restore GUI            ║")
+print("║  Click '✕' to terminate             ║")
 print("╚══════════════════════════════════════╝")
 print("")
