@@ -24,7 +24,7 @@ local isMobile = UserInputService.TouchEnabled and not UserInputService.Keyboard
 -- =============================================
 local Config = {
     Speed = 100,
-    JumpPower = 80,
+    JumpPower = 90,
     MaxAirJumps = 5,
     ESPEnabled = true,
     MaxESPDistance = 2000,
@@ -233,7 +233,7 @@ local function createUI()
     TitleText.Position = UDim2.new(0, isMobile and 200 or 210, 0, 0)
     TitleText.BackgroundTransparency = 1
     TitleText.TextColor3 = Color3.fromRGB(180, 180, 180)
-    TitleText.Text = "Universal ESP"
+    TitleText.Text = "Script by Maryyy"
     TitleText.TextXAlignment = Enum.TextXAlignment.Right
     TitleText.Font = Enum.Font.GothamBold
     TitleText.TextSize = isMobile and 12 or 11
