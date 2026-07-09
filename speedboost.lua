@@ -233,7 +233,7 @@ local function createUI()
     TitleText.Position = UDim2.new(0, isMobile and 200 or 210, 0, 0)
     TitleText.BackgroundTransparency = 1
     TitleText.TextColor3 = Color3.fromRGB(180, 180, 180)
-    TitleText.Text = "Script by Maryyy"
+    TitleText.Text = "Universal ESP + Movespeed"
     TitleText.TextXAlignment = Enum.TextXAlignment.Right
     TitleText.Font = Enum.Font.GothamBold
     TitleText.TextSize = isMobile and 12 or 11
@@ -276,7 +276,6 @@ local function createUI()
     local CloseCorner = Instance.new("UICorner")
     CloseCorner.CornerRadius = UDim.new(0, 4)
     CloseCorner.Parent = CloseBtn
-    
     CloseBtn.MouseButton1Click:Connect(terminateScript)
     
     -- Content Container
