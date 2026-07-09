@@ -1,6 +1,6 @@
 --[[
-    UNIVERSAL ESP - Professional UI
-    Clean design with tabs, smooth animations, and all features
+    UNIVERSAL ESP - Professional Edition
+    Complete standalone - No dependencies
 ]]
 
 repeat wait() until game:IsLoaded() and game.Players.LocalPlayer
@@ -33,13 +33,13 @@ local MainGUI = nil
 local selectedTab = 1
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
--- Clean up
+-- Clean up any existing GUI
 pcall(function()
-    if game.CoreGui:FindFirstChild("ESP_Pro") then
-        game.CoreGui.ESP_Pro:Destroy()
+    if game.CoreGui:FindFirstChild("ESP_Professional") then
+        game.CoreGui.ESP_Professional:Destroy()
     end
-    if game.CoreGui:FindFirstChild("ESP_Min") then
-        game.CoreGui.ESP_Min:Destroy()
+    if game.CoreGui:FindFirstChild("ESP_MinText") then
+        game.CoreGui.ESP_MinText:Destroy()
     end
 end)
 
@@ -54,8 +54,8 @@ local function terminateScript()
         end
     end)
     if MainGUI then MainGUI:Destroy() end
-    if game.CoreGui:FindFirstChild("ESP_Min") then
-        game.CoreGui.ESP_Min:Destroy()
+    if game.CoreGui:FindFirstChild("ESP_MinText") then
+        game.CoreGui.ESP_MinText:Destroy()
     end
     for _, esp in pairs(ESPObjects) do
         if esp and esp.Billboard then esp.Billboard:Destroy() end
@@ -112,7 +112,7 @@ end
 -- =============================================
 local function createUI()
     MainGUI = Instance.new("ScreenGui")
-    MainGUI.Name = "ESP_Pro"
+    MainGUI.Name = "ESP_Professional"
     MainGUI.ResetOnSpawn = false
     MainGUI.IgnoreGuiInset = true
     MainGUI.Parent = game.CoreGui
@@ -121,13 +121,13 @@ local function createUI()
     local w = isMobile and 340 or 400
     local h = isMobile and 380 or 420
     
-    -- ===== MAIN WINDOW =====
+    -- Main Window
     local Main = Instance.new("Frame")
     Main.Size = UDim2.new(0, w, 0, h)
     Main.Position = UDim2.new(0.5, -w/2, 0.5, -h/2)
-    Main.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+    Main.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
     Main.BorderSizePixel = 1
-    Main.BorderColor3 = Color3.fromRGB(45, 45, 55)
+    Main.BorderColor3 = Color3.fromRGB(50, 50, 65)
     Main.ClipsDescendants = true
     Main.Parent = MainGUI
     
@@ -135,27 +135,27 @@ local function createUI()
     MainCorner.CornerRadius = UDim.new(0, 10)
     MainCorner.Parent = Main
     
-    -- Glow border
+    -- Glow Border
     local Glow = Instance.new("Frame")
-    Glow.Size = UDim2.new(1, 4, 1, 4)
-    Glow.Position = UDim2.new(0, -2, 0, -2)
+    Glow.Size = UDim2.new(1, 6, 1, 6)
+    Glow.Position = UDim2.new(0, -3, 0, -3)
     Glow.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
-    Glow.BackgroundTransparency = 0.9
+    Glow.BackgroundTransparency = 0.85
     Glow.BorderSizePixel = 0
     Glow.Parent = Main
     
     local GlowCorner = Instance.new("UICorner")
-    GlowCorner.CornerRadius = UDim.new(0, 12)
+    GlowCorner.CornerRadius = UDim.new(0, 13)
     GlowCorner.Parent = Glow
     
-    -- ===== MINIMIZE TEXT =====
+    -- Minimize Text
     local MinText = Instance.new("TextButton")
-    MinText.Name = "ESP_Min"
+    MinText.Name = "ESP_MinText"
     MinText.Size = UDim2.new(0, isMobile and 160 or 140, 0, isMobile and 36 or 32)
     MinText.Position = UDim2.new(0, 10, 0, isMobile and 150 or 130)
-    MinText.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    MinText.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
     MinText.BorderSizePixel = 1
-    MinText.BorderColor3 = Color3.fromRGB(45, 45, 55)
+    MinText.BorderColor3 = Color3.fromRGB(50, 50, 65)
     MinText.TextColor3 = Color3.fromRGB(0, 200, 255)
     MinText.Text = "👁️ Universal ESP"
     MinText.Font = Enum.Font.GothamBold
@@ -168,10 +168,10 @@ local function createUI()
     MinTextCorner.CornerRadius = UDim.new(0, 8)
     MinTextCorner.Parent = MinText
     
-    -- ===== TITLE BAR =====
+    -- Title Bar
     local TitleBar = Instance.new("Frame")
     TitleBar.Size = UDim2.new(1, 0, 0, isMobile and 34 or 30)
-    TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+    TitleBar.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
     TitleBar.BorderSizePixel = 0
     TitleBar.Parent = Main
     
@@ -192,22 +192,22 @@ local function createUI()
     Title.Parent = TitleBar
     
     -- FPS
-    local FPS = Instance.new("TextLabel")
-    FPS.Size = UDim2.new(0, 55, 1, 0)
-    FPS.Position = UDim2.new(0, 85, 0, 0)
-    FPS.BackgroundTransparency = 1
-    FPS.TextColor3 = Color3.fromRGB(0, 255, 100)
-    FPS.Text = "FPS: --"
-    FPS.TextXAlignment = Enum.TextXAlignment.Left
-    FPS.Font = Enum.Font.GothamBold
-    FPS.TextSize = isMobile and 10 or 9
-    FPS.Parent = TitleBar
+    local FPSLabel = Instance.new("TextLabel")
+    FPSLabel.Size = UDim2.new(0, 55, 1, 0)
+    FPSLabel.Position = UDim2.new(0, 85, 0, 0)
+    FPSLabel.BackgroundTransparency = 1
+    FPSLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+    FPSLabel.Text = "FPS: --"
+    FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
+    FPSLabel.Font = Enum.Font.GothamBold
+    FPSLabel.TextSize = isMobile and 10 or 9
+    FPSLabel.Parent = TitleBar
     
     -- Min Button
     local MinBtn = Instance.new("TextButton")
     MinBtn.Size = UDim2.new(0, isMobile and 24 or 22, 0, isMobile and 24 or 22)
     MinBtn.Position = UDim2.new(1, isMobile and -34 or -30, 0.5, isMobile and -12 or -11)
-    MinBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    MinBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
     MinBtn.BorderSizePixel = 0
     MinBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
     MinBtn.Text = "—"
@@ -224,7 +224,7 @@ local function createUI()
     local CloseBtn = Instance.new("TextButton")
     CloseBtn.Size = UDim2.new(0, isMobile and 24 or 22, 0, isMobile and 24 or 22)
     CloseBtn.Position = UDim2.new(1, isMobile and -8 or -6, 0.5, isMobile and -12 or -11)
-    CloseBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
     CloseBtn.BorderSizePixel = 0
     CloseBtn.TextColor3 = Color3.fromRGB(255, 60, 60)
     CloseBtn.Text = "✕"
@@ -236,16 +236,18 @@ local function createUI()
     local CloseBtnCorner = Instance.new("UICorner")
     CloseBtnCorner.CornerRadius = UDim.new(0, 4)
     CloseBtnCorner.Parent = CloseBtn
+    
+    -- Fix: Use MouseButton1Click instead of Activated
     CloseBtn.MouseButton1Click:Connect(terminateScript)
     
-    -- ===== CONTENT =====
+    -- Content
     local Content = Instance.new("Frame")
     Content.Size = UDim2.new(1, 0, 1, isMobile and -34 or -30)
     Content.Position = UDim2.new(0, 0, 0, isMobile and 34 or 30)
     Content.BackgroundTransparency = 1
     Content.Parent = Main
     
-    -- ===== TABS =====
+    -- Tabs
     local tabs = {"ESP", "Player", "Settings"}
     local tabIcons = {"👁️", "👤", "⚙️"}
     local tabButtons = {}
@@ -256,9 +258,9 @@ local function createUI()
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1/3, -2, 0, tabHeight)
         btn.Position = UDim2.new((i-1)/3, 1, 0, 4)
-        btn.BackgroundColor3 = i == 1 and Color3.fromRGB(45, 45, 55) or Color3.fromRGB(25, 25, 32)
+        btn.BackgroundColor3 = i == 1 and Color3.fromRGB(50, 50, 65) or Color3.fromRGB(25, 25, 35)
         btn.BorderSizePixel = 0
-        btn.TextColor3 = i == 1 and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 160)
+        btn.TextColor3 = i == 1 and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 170)
         btn.Text = tabIcons[i] .. " " .. name
         btn.Font = Enum.Font.GothamBold
         btn.TextSize = isMobile and 11 or 10
@@ -276,13 +278,14 @@ local function createUI()
         panel.Visible = (i == 1)
         panel.Parent = Content
         
+        -- Fix: Use MouseButton1Click instead of Activated
         btn.MouseButton1Click:Connect(function()
             for j = 1, #tabButtons do
-                tabButtons[j].BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-                tabButtons[j].TextColor3 = Color3.fromRGB(150, 150, 160)
+                tabButtons[j].BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+                tabButtons[j].TextColor3 = Color3.fromRGB(150, 150, 170)
                 tabPanels[j].Visible = false
             end
-            btn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
             btn.TextColor3 = Color3.fromRGB(255, 255, 255)
             panel.Visible = true
             selectedTab = i
@@ -297,11 +300,11 @@ local function createUI()
     -- =============================================
     local espPanel = tabPanels[1]
     
-    -- Status bar
+    -- Status Bar
     local StatusBg = Instance.new("Frame")
     StatusBg.Size = UDim2.new(1, -20, 0, isMobile and 32 or 28)
     StatusBg.Position = UDim2.new(0, 10, 0, 4)
-    StatusBg.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+    StatusBg.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
     StatusBg.BorderSizePixel = 0
     StatusBg.Parent = espPanel
     
@@ -336,6 +339,7 @@ local function createUI()
     ToggleCorner.CornerRadius = UDim.new(0, 4)
     ToggleCorner.Parent = Toggle
     
+    -- Fix: Use MouseButton1Click instead of Activated
     Toggle.MouseButton1Click:Connect(function()
         Config.ESPEnabled = not Config.ESPEnabled
         Toggle.Text = Config.ESPEnabled and "ON" or "OFF"
@@ -344,12 +348,12 @@ local function createUI()
         Status.TextColor3 = Config.ESPEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(180, 80, 80)
     end)
     
-    -- Stats grid
+    -- Stats Boxes
     local function statBox(parent, icon, text, y, color)
         local box = Instance.new("Frame")
         box.Size = UDim2.new(1, -20, 0, isMobile and 28 or 24)
         box.Position = UDim2.new(0, 10, 0, y)
-        box.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+        box.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
         box.BorderSizePixel = 0
         box.Parent = parent
         
@@ -383,11 +387,11 @@ local function createUI()
     -- =============================================
     local playerPanel = tabPanels[2]
     
-    -- Player name
+    -- Player Name
     local NameBg = Instance.new("Frame")
     NameBg.Size = UDim2.new(1, -20, 0, isMobile and 36 or 32)
     NameBg.Position = UDim2.new(0, 10, 0, 4)
-    NameBg.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+    NameBg.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
     NameBg.BorderSizePixel = 0
     NameBg.Parent = playerPanel
     
@@ -410,7 +414,7 @@ local function createUI()
     local BountyBg = Instance.new("Frame")
     BountyBg.Size = UDim2.new(1, -20, 0, isMobile and 36 or 32)
     BountyBg.Position = UDim2.new(0, 10, 0, 44)
-    BountyBg.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+    BountyBg.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
     BountyBg.BorderSizePixel = 0
     BountyBg.Parent = playerPanel
     
@@ -429,12 +433,12 @@ local function createUI()
     Bounty.TextSize = isMobile and 11 or 10
     Bounty.Parent = BountyBg
     
-    -- Health section
+    -- Health Section
     local HealthLabel = Instance.new("TextLabel")
     HealthLabel.Size = UDim2.new(1, -20, 0, 16)
     HealthLabel.Position = UDim2.new(0, 10, 0, 88)
     HealthLabel.BackgroundTransparency = 1
-    HealthLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
+    HealthLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
     HealthLabel.Text = "❤️ Health"
     HealthLabel.TextXAlignment = Enum.TextXAlignment.Left
     HealthLabel.Font = Enum.Font.GothamBold
@@ -445,7 +449,7 @@ local function createUI()
     local Hbg = Instance.new("Frame")
     Hbg.Size = UDim2.new(1, -20, 0, isMobile and 16 or 14)
     Hbg.Position = UDim2.new(0, 10, 0, 108)
-    Hbg.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+    Hbg.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
     Hbg.BorderSizePixel = 0
     Hbg.Parent = playerPanel
     
@@ -477,12 +481,12 @@ local function createUI()
     -- =============================================
     local settingsPanel = tabPanels[3]
     
-    -- Stats section
+    -- Stats Section
     local SettingsLabel = Instance.new("TextLabel")
     SettingsLabel.Size = UDim2.new(1, -20, 0, 16)
     SettingsLabel.Position = UDim2.new(0, 10, 0, 4)
     SettingsLabel.BackgroundTransparency = 1
-    SettingsLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
+    SettingsLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
     SettingsLabel.Text = "⚙️ Permanent Stats"
     SettingsLabel.TextXAlignment = Enum.TextXAlignment.Left
     SettingsLabel.Font = Enum.Font.GothamBold
@@ -501,7 +505,7 @@ local function createUI()
         local box = Instance.new("Frame")
         box.Size = UDim2.new(1, -20, 0, isMobile and 24 or 20)
         box.Position = UDim2.new(0, 10, 0, statY)
-        box.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+        box.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
         box.BorderSizePixel = 0
         box.Parent = settingsPanel
         
@@ -541,6 +545,7 @@ local function createUI()
         btnCorner.CornerRadius = UDim.new(0, 4)
         btnCorner.Parent = btn
         
+        -- Fix: Use MouseButton1Click instead of Activated
         btn.MouseButton1Click:Connect(callback)
         
         btn.MouseEnter:Connect(function()
@@ -578,6 +583,7 @@ local function createUI()
         MinText.Visible = true
     end
     
+    -- Fix: Use MouseButton1Click instead of Activated
     MinBtn.MouseButton1Click:Connect(showText)
     MinText.MouseButton1Click:Connect(showMain)
     
@@ -638,7 +644,7 @@ local function createUI()
     return {
         Main = Main,
         MinText = MinText,
-        FPS = FPS,
+        FPS = FPSLabel,
         Bounty = Bounty,
         PlayersCount = PlayerCountBox,
         Hfill = Hfill,
@@ -960,6 +966,7 @@ print("║  🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps
 print("║  👁️  ESP Active                      ║")
 print("║  📏 Range: " .. Config.MaxESPDistance .. "m              ║")
 print("╠══════════════════════════════════════╣")
+print("║  Zero Dependencies - 100% Standalone║")
 print("║  Professional Tabbed UI             ║")
 print("║  Click '—' to minimize              ║")
 print("║  Click '✕' to terminate             ║")
