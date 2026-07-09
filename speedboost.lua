@@ -213,7 +213,7 @@ local function createUI()
     local CCorner = Instance.new("UICorner")
     CCorner.CornerRadius = UDim.new(0, 3)
     CCorner.Parent = CloseBtn
-    CloseBtn.Activated:Connect(terminateScript)
+    CloseBtn.MouseButton1Click:Connect(terminateScript)  -- FIXED: Changed from Activated to MouseButton1Click
     
     -- Content
     local Content = Instance.new("Frame")
@@ -251,7 +251,7 @@ local function createUI()
     TCorner2.CornerRadius = UDim.new(0, 3)
     TCorner2.Parent = Toggle
     
-    Toggle.Activated:Connect(function()
+    Toggle.MouseButton1Click:Connect(function()  -- FIXED: Changed from Activated to MouseButton1Click
         Config.ESPEnabled = not Config.ESPEnabled
         Toggle.Text = Config.ESPEnabled and "ON" or "OFF"
         Toggle.BackgroundColor3 = Config.ESPEnabled and Color3.fromRGB(35, 35, 35) or Color3.fromRGB(55, 20, 20)
@@ -323,8 +323,8 @@ local function createUI()
         MinText.Visible = true
     end
     
-    MinBtn.Activated:Connect(showText)
-    MinText.Activated:Connect(showMain)
+    MinBtn.MouseButton1Click:Connect(showText)  -- FIXED: Changed from Activated to MouseButton1Click
+    MinText.MouseButton1Click:Connect(showMain)  -- FIXED: Changed from Activated to MouseButton1Click
     
     -- Text drag
     local td, tds, tsp, tm = false
