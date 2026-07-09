@@ -1,6 +1,6 @@
 --[[
-    UNIVERSAL ESP - Rayfield UI Version
-    Properly loads Rayfield with error handling
+    UNIVERSAL ESP - Standalone Tabbed UI
+    No external libraries, clean Rayfield-style interface
 ]]
 
 repeat wait() until game:IsLoaded() and game.Players.LocalPlayer
@@ -10,6 +10,7 @@ local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local Camera = game:GetService("Workspace").CurrentCamera
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local Stats = game:GetService("Stats")
 local Workspace = game:GetService("Workspace")
 local Teams = game:GetService("Teams")
@@ -22,7 +23,9 @@ local Config = {
     JumpPower = 80,
     MaxAirJumps = 5,
     ESPEnabled = true,
-    MaxESPDistance = 2000
+    MaxESPDistance = 2000,
+    Minimized = false,
+    Hidden = false
 }
 
 -- =============================================
@@ -32,462 +35,20 @@ local ScriptActive = true
 local airJumpsLeft = 0
 local ESPObjects = {}
 local espConnections = {}
-local Window = nil
-local RayfieldLoaded = false
-local Rayfield = nil
+local MainGUI = nil
+local UI = nil
+local selectedTab = 1
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
--- =============================================
--- LOAD RAYFIELD WITH RETRY
--- =============================================
-local function loadRayfield()
-    local success, result = pcall(function()
-        return loadstring(game:HttpGet('https://sirius.menu/rayfield', true))()
-    end)
-    
-    if success and result then
-        RayfieldLoaded = true
-        Rayfield = result
-        print("✓ Rayfield loaded successfully")
-        return true
-    else
-        print("⚠️ Failed to load Rayfield: " .. tostring(result))
-        return false
+-- Clean up any existing GUI
+pcall(function()
+    if game.CoreGui:FindFirstChild("ESP_TabbedUI") then
+        game.CoreGui.ESP_TabbedUI:Destroy()
     end
-end
-
--- Try to load Rayfield
-local loaded = loadRayfield()
-
--- If Rayfield fails, use fallback
-if not loaded then
-    -- Load fallback UI script
-    print("⚠️ Using fallback UI")
-    local fallbackScript = [[
-        -- Fallback UI for ESP
-        local Players = game:GetService("Players")
-        local LocalPlayer = Players.LocalPlayer
-        local UserInputService = game:GetService("UserInputService")
-        local RunService = game:GetService("RunService")
-        
-        local ScriptActive = true
-        local Config = {
-            Speed = 100,
-            JumpPower = 80,
-            MaxAirJumps = 5,
-            ESPEnabled = true,
-            MaxESPDistance = 2000
-        }
-        
-        local MainGUI = nil
-        
-        local function terminateScript()
-            ScriptActive = false
-            if MainGUI then MainGUI:Destroy() end
-            if game.CoreGui:FindFirstChild("ESP_Min") then
-                game.CoreGui.ESP_Min:Destroy()
-            end
-        end
-        
-        local function createUI()
-            MainGUI = Instance.new("ScreenGui")
-            MainGUI.Name = "ESP_Fallback"
-            MainGUI.ResetOnSpawn = false
-            MainGUI.IgnoreGuiInset = true
-            MainGUI.Parent = game.CoreGui
-            MainGUI.ZIndexBehavior = Enum.ZIndexBehavior.Global
-            
-            local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-            local w = isMobile and 300 or 340
-            local h = isMobile and 220 or 240
-            
-            local Main = Instance.new("Frame")
-            Main.Size = UDim2.new(0, w, 0, h)
-            Main.Position = UDim2.new(0.5, -w/2, 0.5, -h/2)
-            Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-            Main.BorderSizePixel = 1
-            Main.BorderColor3 = Color3.fromRGB(35, 35, 35)
-            Main.ClipsDescendants = true
-            Main.Parent = MainGUI
-            
-            local Corner = Instance.new("UICorner")
-            Corner.CornerRadius = UDim.new(0, 6)
-            Corner.Parent = Main
-            
-            -- Minimize Text
-            local MinText = Instance.new("TextButton")
-            MinText.Name = "ESP_Min"
-            MinText.Size = UDim2.new(0, isMobile and 150 or 130, 0, isMobile and 32 or 28)
-            MinText.Position = UDim2.new(0, 10, 0, isMobile and 90 or 70)
-            MinText.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-            MinText.BorderSizePixel = 1
-            MinText.BorderColor3 = Color3.fromRGB(35, 35, 35)
-            MinText.TextColor3 = Color3.fromRGB(0, 200, 255)
-            MinText.Text = "👁️ Universal ESP"
-            MinText.Font = Enum.Font.GothamBold
-            MinText.TextSize = isMobile and 13 or 11
-            MinText.AutoButtonColor = false
-            MinText.Visible = false
-            MinText.Active = true
-            MinText.ZIndex = 20
-            MinText.Parent = MainGUI
-            
-            local TCorner = Instance.new("UICorner")
-            TCorner.CornerRadius = UDim.new(0, 6)
-            TCorner.Parent = MinText
-            
-            -- Title Bar
-            local TitleBar = Instance.new("Frame")
-            TitleBar.Size = UDim2.new(1, 0, 0, isMobile and 26 or 22)
-            TitleBar.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-            TitleBar.BorderSizePixel = 0
-            TitleBar.Parent = Main
-            
-            local TitleText = Instance.new("TextLabel")
-            TitleText.Size = UDim2.new(1, -45, 1, 0)
-            TitleText.Position = UDim2.new(0, 8, 0, 0)
-            TitleText.BackgroundTransparency = 1
-            TitleText.TextColor3 = Color3.fromRGB(0, 200, 255)
-            TitleText.Text = "Universal ESP"
-            TitleText.TextXAlignment = Enum.TextXAlignment.Left
-            TitleText.Font = Enum.Font.GothamBold
-            TitleText.TextSize = isMobile and 10 or 9
-            TitleText.Parent = TitleBar
-            
-            -- FPS in title
-            local FPSLabel = Instance.new("TextLabel")
-            FPSLabel.Size = UDim2.new(0, 55, 1, 0)
-            FPSLabel.Position = UDim2.new(0, 75, 0, 0)
-            FPSLabel.BackgroundTransparency = 1
-            FPSLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
-            FPSLabel.Text = "FPS: --"
-            FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
-            FPSLabel.Font = Enum.Font.GothamBold
-            FPSLabel.TextSize = isMobile and 9 or 8
-            FPSLabel.Parent = TitleBar
-            
-            -- Min Button
-            local MinBtn = Instance.new("TextButton")
-            MinBtn.Size = UDim2.new(0, isMobile and 20 or 18, 0, isMobile and 20 or 18)
-            MinBtn.Position = UDim2.new(1, isMobile and -26 or -22, 0.5, isMobile and -10 or -9)
-            MinBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
-            MinBtn.BorderSizePixel = 0
-            MinBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-            MinBtn.Text = "—"
-            MinBtn.Font = Enum.Font.GothamBold
-            MinBtn.TextSize = isMobile and 11 or 9
-            MinBtn.AutoButtonColor = false
-            MinBtn.Active = true
-            MinBtn.ZIndex = 20
-            MinBtn.Parent = TitleBar
-            
-            local MCorner = Instance.new("UICorner")
-            MCorner.CornerRadius = UDim.new(0, 3)
-            MCorner.Parent = MinBtn
-            
-            -- Close Button
-            local CloseBtn = Instance.new("TextButton")
-            CloseBtn.Size = UDim2.new(0, isMobile and 20 or 18, 0, isMobile and 20 or 18)
-            CloseBtn.Position = UDim2.new(1, isMobile and -6 or -4, 0.5, isMobile and -10 or -9)
-            CloseBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
-            CloseBtn.BorderSizePixel = 0
-            CloseBtn.TextColor3 = Color3.fromRGB(255, 50, 50)
-            CloseBtn.Text = "✕"
-            CloseBtn.Font = Enum.Font.GothamBold
-            CloseBtn.TextSize = isMobile and 9 or 7
-            CloseBtn.AutoButtonColor = false
-            CloseBtn.Active = true
-            CloseBtn.ZIndex = 20
-            CloseBtn.Parent = TitleBar
-            
-            local CCorner = Instance.new("UICorner")
-            CCorner.CornerRadius = UDim.new(0, 3)
-            CCorner.Parent = CloseBtn
-            CloseBtn.Activated:Connect(terminateScript)
-            
-            -- Content
-            local Content = Instance.new("Frame")
-            Content.Size = UDim2.new(1, 0, 1, isMobile and -26 or -22)
-            Content.Position = UDim2.new(0, 0, 0, isMobile and 26 or 22)
-            Content.BackgroundTransparency = 1
-            Content.Parent = Main
-            
-            -- ESP Status
-            local ESPStatus = Instance.new("TextLabel")
-            ESPStatus.Size = UDim2.new(0.5, 0, 0, 16)
-            ESPStatus.Position = UDim2.new(0, 8, 0, 4)
-            ESPStatus.BackgroundTransparency = 1
-            ESPStatus.TextColor3 = Color3.fromRGB(0, 255, 100)
-            ESPStatus.Text = "● ESP Active"
-            ESPStatus.TextXAlignment = Enum.TextXAlignment.Left
-            ESPStatus.Font = Enum.Font.GothamBold
-            ESPStatus.TextSize = isMobile and 9 or 8
-            ESPStatus.Parent = Content
-            
-            -- Toggle Button
-            local ToggleBtn = Instance.new("TextButton")
-            ToggleBtn.Size = UDim2.new(0, isMobile and 50 or 45, 0, isMobile and 18 or 16)
-            ToggleBtn.Position = UDim2.new(1, isMobile and -58 or -53, 0, 4)
-            ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            ToggleBtn.BorderSizePixel = 0
-            ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            ToggleBtn.Text = "ON"
-            ToggleBtn.Font = Enum.Font.GothamBold
-            ToggleBtn.TextSize = isMobile and 8 or 7
-            ToggleBtn.AutoButtonColor = false
-            ToggleBtn.Active = true
-            ToggleBtn.ZIndex = 10
-            ToggleBtn.Parent = Content
-            
-            local TCorner2 = Instance.new("UICorner")
-            TCorner2.CornerRadius = UDim.new(0, 3)
-            TCorner2.Parent = ToggleBtn
-            
-            ToggleBtn.Activated:Connect(function()
-                Config.ESPEnabled = not Config.ESPEnabled
-                ToggleBtn.Text = Config.ESPEnabled and "ON" or "OFF"
-                ToggleBtn.BackgroundColor3 = Config.ESPEnabled and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(50, 20, 20)
-                ESPStatus.Text = Config.ESPEnabled and "● ESP Active" or "● ESP Off"
-                ESPStatus.TextColor3 = Config.ESPEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(150, 150, 150)
-            end)
-            
-            -- Helper
-            local function label(parent, text, y, color)
-                local l = Instance.new("TextLabel")
-                l.Size = UDim2.new(1, -16, 0, 14)
-                l.Position = UDim2.new(0, 8, 0, y)
-                l.BackgroundTransparency = 1
-                l.TextColor3 = color or Color3.fromRGB(180, 180, 180)
-                l.Text = text
-                l.TextXAlignment = Enum.TextXAlignment.Left
-                l.Font = Enum.Font.GothamBold
-                l.TextSize = isMobile and 9 or 8
-                l.Parent = parent
-                return l
-            end
-            
-            label(Content, "⚡ Speed: " .. Config.Speed, 24, Color3.fromRGB(0, 200, 255))
-            label(Content, "🦘 Jump: " .. Config.JumpPower, 40, Color3.fromRGB(100, 200, 255))
-            label(Content, "🔄 Air Jumps: " .. Config.MaxAirJumps, 56, Color3.fromRGB(200, 200, 100))
-            
-            local BountyLabel = label(Content, "💰 Bounty: Searching...", 74, Color3.fromRGB(255, 200, 0))
-            local PlayerCount = label(Content, "👥 Players: 0", 92, Color3.fromRGB(100, 255, 100))
-            
-            -- Health bar
-            local HealthBg = Instance.new("Frame")
-            HealthBg.Size = UDim2.new(1, -16, 0, 10)
-            HealthBg.Position = UDim2.new(0, 8, 0, 110)
-            HealthBg.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-            HealthBg.BorderSizePixel = 0
-            HealthBg.Parent = Content
-            
-            local HCorner = Instance.new("UICorner")
-            HCorner.CornerRadius = UDim.new(0, 3)
-            HCorner.Parent = HealthBg
-            
-            local HealthFill = Instance.new("Frame")
-            HealthFill.Size = UDim2.new(1, 0, 1, 0)
-            HealthFill.BackgroundColor3 = Color3.fromRGB(60, 200, 60)
-            HealthFill.BorderSizePixel = 0
-            HealthFill.Parent = HealthBg
-            
-            local HFCorner = Instance.new("UICorner")
-            HFCorner.CornerRadius = UDim.new(0, 3)
-            HFCorner.Parent = HealthFill
-            
-            local HealthText = Instance.new("TextLabel")
-            HealthText.Size = UDim2.new(1, 0, 1, 0)
-            HealthText.BackgroundTransparency = 1
-            HealthText.TextColor3 = Color3.fromRGB(255, 255, 255)
-            HealthText.Text = "100%"
-            HealthText.Font = Enum.Font.GothamBold
-            HealthText.TextSize = 8
-            HealthText.Parent = HealthFill
-            
-            -- Minimize functions
-            local function showMain()
-                Main.Visible = true
-                MinText.Visible = false
-            end
-            
-            local function showText()
-                Main.Visible = false
-                MinText.Visible = true
-            end
-            
-            MinBtn.Activated:Connect(showText)
-            MinText.Activated:Connect(showMain)
-            
-            -- Text drag
-            local textDragging, textDragStart, textStartPos, textMoved = false
-            
-            MinText.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    textDragging = true
-                    textMoved = false
-                    textDragStart = input.Position
-                    textStartPos = MinText.Position
-                end
-            end)
-            
-            UserInputService.InputChanged:Connect(function(input)
-                if textDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                    local delta = input.Position - textDragStart
-                    if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then textMoved = true end
-                    MinText.Position = UDim2.new(textStartPos.X.Scale, textStartPos.X.Offset + delta.X, textStartPos.Y.Scale, textStartPos.Y.Offset + delta.Y)
-                end
-            end)
-            
-            MinText.InputEnded:Connect(function(input)
-                if textDragging then
-                    if not textMoved then showMain() end
-                    textDragging = false
-                end
-            end)
-            
-            -- Window drag
-            local dragActive, dragInput, dragStart, startPos = false
-            
-            TitleBar.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    dragActive = true
-                    dragStart = input.Position
-                    startPos = Main.Position
-                    input.Changed:Connect(function()
-                        if input.UserInputState == Enum.UserInputState.End then dragActive = false end
-                    end)
-                end
-            end)
-            
-            TitleBar.InputChanged:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                    dragInput = input
-                end
-            end)
-            
-            RunService.RenderStepped:Connect(function()
-                if dragActive and dragInput then
-                    local delta = dragInput.Position - dragStart
-                    Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-                end
-            end)
-            
-            return {
-                Main = Main,
-                MinText = MinText,
-                FPSLabel = FPSLabel,
-                BountyLabel = BountyLabel,
-                PlayerCount = PlayerCount,
-                HealthFill = HealthFill,
-                HealthText = HealthText,
-                ESPStatus = ESPStatus,
-                ToggleBtn = ToggleBtn
-            }
-        end
-        
-        return createUI()
-    ]]
-    
-    -- Execute fallback
-    local fallbackFunc = loadstring(fallbackScript)
-    if fallbackFunc then
-        UI = fallbackFunc()
+    if game.CoreGui:FindFirstChild("ESP_MinText") then
+        game.CoreGui.ESP_MinText:Destroy()
     end
-else
-    -- =============================================
-    -- CREATE RAYFIELD UI
-    -- =============================================
-    local function createRayfieldUI()
-        Window = Rayfield:CreateWindow({
-            Name = "Universal ESP",
-            Icon = 0,
-            LoadingTitle = "Loading ESP...",
-            LoadingSubtitle = "Universal Script",
-            Theme = "DarkBlue",
-            ConfigurationSaving = {
-                Enabled = true,
-                FolderName = "UniversalESP",
-                FileName = "Settings"
-            },
-            Discord = {
-                Enabled = false
-            },
-            KeySystem = false
-        })
-        
-        -- ESP Tab
-        local ESPTab = Window:CreateTab("ESP", 0)
-        ESPTab:CreateSection("ESP Controls")
-        
-        ESPTab:CreateToggle({
-            Name = "Enable ESP",
-            CurrentValue = true,
-            Flag = "ESPEnabled",
-            Callback = function(Value)
-                Config.ESPEnabled = Value
-            end
-        })
-        
-        ESPTab:CreateSlider({
-            Name = "ESP Range (meters)",
-            Range = {500, 3000},
-            Increment = 100,
-            Suffix = "m",
-            CurrentValue = 2000,
-            Flag = "ESPRange",
-            Callback = function(Value)
-                Config.MaxESPDistance = Value
-            end
-        })
-        
-        ESPTab:CreateSection("Stats")
-        ESPTab:CreateLabel("⚡ Speed: " .. Config.Speed)
-        ESPTab:CreateLabel("🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps)
-        
-        -- Player Tab
-        local PlayerTab = Window:CreateTab("Player", 0)
-        PlayerTab:CreateSection("Player Info")
-        PlayerTab:CreateLabel("👤 " .. LocalPlayer.Name)
-        local BountyLabel = PlayerTab:CreateLabel("💰 Bounty: Searching...")
-        PlayerTab:CreateSection("Health")
-        local HealthLabel = PlayerTab:CreateLabel("Health: 100%")
-        
-        -- Settings Tab
-        local SettingsTab = Window:CreateTab("Settings", 0)
-        SettingsTab:CreateSection("Permanent Stats")
-        SettingsTab:CreateLabel("Walk Speed: " .. Config.Speed)
-        SettingsTab:CreateLabel("Jump Power: " .. Config.JumpPower)
-        SettingsTab:CreateLabel("Air Jumps: " .. Config.MaxAirJumps)
-        
-        SettingsTab:CreateSection("Controls")
-        SettingsTab:CreateButton({
-            Name = "Toggle ESP",
-            Callback = function()
-                Config.ESPEnabled = not Config.ESPEnabled
-                Rayfield:Notify({
-                    Title = "ESP " .. (Config.ESPEnabled and "Enabled" or "Disabled"),
-                    Content = "ESP is now " .. (Config.ESPEnabled and "active" or "inactive"),
-                    Duration = 2
-                })
-            end
-        })
-        
-        SettingsTab:CreateButton({
-            Name = "⚠️ Terminate Script",
-            Callback = function()
-                terminateScript()
-            end
-        })
-        
-        -- Clean up on close
-        Rayfield:OnClose(function()
-            terminateScript()
-        end)
-        
-        return {BountyLabel = BountyLabel, HealthLabel = HealthLabel}
-    end
-    
-    UI = createRayfieldUI()
-end
+end)
 
 -- =============================================
 -- TERMINATE FUNCTION
@@ -503,19 +64,9 @@ local function terminateScript()
         end
     end)
     
-    if Window then
-        pcall(function()
-            if RayfieldLoaded and Rayfield then
-                Rayfield:Destroy()
-            end
-        end)
-    end
-    
-    if game.CoreGui:FindFirstChild("ESP_Fallback") then
-        game.CoreGui.ESP_Fallback:Destroy()
-    end
-    if game.CoreGui:FindFirstChild("ESP_Min") then
-        game.CoreGui.ESP_Min:Destroy()
+    if MainGUI then MainGUI:Destroy() end
+    if game.CoreGui:FindFirstChild("ESP_MinText") then
+        game.CoreGui.ESP_MinText:Destroy()
     end
     
     for _, esp in pairs(ESPObjects) do
@@ -577,6 +128,434 @@ local function scanBounty()
 end
 
 -- =============================================
+-- CREATE TABBED UI (RAYFIELD STYLE)
+-- =============================================
+local function createUI()
+    MainGUI = Instance.new("ScreenGui")
+    MainGUI.Name = "ESP_TabbedUI"
+    MainGUI.ResetOnSpawn = false
+    MainGUI.IgnoreGuiInset = true
+    MainGUI.Parent = game.CoreGui
+    MainGUI.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    
+    local w = isMobile and 340 or 400
+    local h = isMobile and 320 or 360
+    
+    -- Main Window
+    local Main = Instance.new("Frame")
+    Main.Size = UDim2.new(0, w, 0, h)
+    Main.Position = UDim2.new(0.5, -w/2, 0.5, -h/2)
+    Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Main.BorderSizePixel = 1
+    Main.BorderColor3 = Color3.fromRGB(40, 40, 40)
+    Main.ClipsDescendants = true
+    Main.Parent = MainGUI
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 8)
+    Corner.Parent = Main
+    
+    -- Minimize Text Button
+    local MinText = Instance.new("TextButton")
+    MinText.Name = "ESP_MinText"
+    MinText.Size = UDim2.new(0, isMobile and 160 or 140, 0, isMobile and 34 or 30)
+    MinText.Position = UDim2.new(0, 10, 0, isMobile and 120 or 100)
+    MinText.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    MinText.BorderSizePixel = 1
+    MinText.BorderColor3 = Color3.fromRGB(40, 40, 40)
+    MinText.TextColor3 = Color3.fromRGB(0, 200, 255)
+    MinText.Text = "👁️ Universal ESP"
+    MinText.Font = Enum.Font.GothamBold
+    MinText.TextSize = isMobile and 14 or 12
+    MinText.AutoButtonColor = false
+    MinText.Visible = false
+    MinText.Active = true
+    MinText.ZIndex = 20
+    MinText.Parent = MainGUI
+    
+    local TCorner = Instance.new("UICorner")
+    TCorner.CornerRadius = UDim.new(0, 6)
+    TCorner.Parent = MinText
+    
+    -- Title Bar
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Size = UDim2.new(1, 0, 0, isMobile and 30 or 28)
+    TitleBar.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+    TitleBar.BorderSizePixel = 0
+    TitleBar.Parent = Main
+    
+    -- Title
+    local TitleText = Instance.new("TextLabel")
+    TitleText.Size = UDim2.new(1, -65, 1, 0)
+    TitleText.Position = UDim2.new(0, 10, 0, 0)
+    TitleText.BackgroundTransparency = 1
+    TitleText.TextColor3 = Color3.fromRGB(0, 200, 255)
+    TitleText.Text = "Universal ESP"
+    TitleText.TextXAlignment = Enum.TextXAlignment.Left
+    TitleText.Font = Enum.Font.GothamBold
+    TitleText.TextSize = isMobile and 12 or 11
+    TitleText.Parent = TitleBar
+    
+    -- FPS in Title
+    local FPSLabel = Instance.new("TextLabel")
+    FPSLabel.Size = UDim2.new(0, 55, 1, 0)
+    FPSLabel.Position = UDim2.new(0, 80, 0, 0)
+    FPSLabel.BackgroundTransparency = 1
+    FPSLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+    FPSLabel.Text = "FPS: --"
+    FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
+    FPSLabel.Font = Enum.Font.GothamBold
+    FPSLabel.TextSize = isMobile and 10 or 9
+    FPSLabel.Parent = TitleBar
+    
+    -- Minimize Button
+    local MinBtn = Instance.new("TextButton")
+    MinBtn.Size = UDim2.new(0, isMobile and 24 or 22, 0, isMobile and 24 or 22)
+    MinBtn.Position = UDim2.new(1, isMobile and -30 or -28, 0.5, isMobile and -12 or -11)
+    MinBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    MinBtn.BorderSizePixel = 0
+    MinBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    MinBtn.Text = "—"
+    MinBtn.Font = Enum.Font.GothamBold
+    MinBtn.TextSize = isMobile and 12 or 10
+    MinBtn.AutoButtonColor = false
+    MinBtn.Active = true
+    MinBtn.ZIndex = 20
+    MinBtn.Parent = TitleBar
+    
+    local MCorner = Instance.new("UICorner")
+    MCorner.CornerRadius = UDim.new(0, 3)
+    MCorner.Parent = MinBtn
+    
+    -- Close Button
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, isMobile and 24 or 22, 0, isMobile and 24 or 22)
+    CloseBtn.Position = UDim2.new(1, isMobile and -6 or -5, 0.5, isMobile and -12 or -11)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    CloseBtn.BorderSizePixel = 0
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 50, 50)
+    CloseBtn.Text = "✕"
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.TextSize = isMobile and 10 or 8
+    CloseBtn.AutoButtonColor = false
+    CloseBtn.Active = true
+    CloseBtn.ZIndex = 20
+    CloseBtn.Parent = TitleBar
+    
+    local CCorner = Instance.new("UICorner")
+    CCorner.CornerRadius = UDim.new(0, 3)
+    CCorner.Parent = CloseBtn
+    CloseBtn.Activated:Connect(terminateScript)
+    
+    -- Content
+    local Content = Instance.new("Frame")
+    Content.Size = UDim2.new(1, 0, 1, isMobile and -30 or -28)
+    Content.Position = UDim2.new(0, 0, 0, isMobile and 30 or 28)
+    Content.BackgroundTransparency = 1
+    Content.Parent = Main
+    
+    -- Tabs
+    local tabs = {"ESP", "Player", "Settings"}
+    local tabIcons = {"👁️", "👤", "⚙️"}
+    local tabButtons = {}
+    local tabPanels = {}
+    local tabHeight = isMobile and 28 or 24
+    
+    for i, name in ipairs(tabs) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1/3, -1, 0, tabHeight)
+        btn.Position = UDim2.new((i-1)/3, 1, 0, 2)
+        btn.BackgroundColor3 = i == 1 and Color3.fromRGB(40, 40, 40) or Color3.fromRGB(22, 22, 22)
+        btn.BorderSizePixel = 0
+        btn.TextColor3 = i == 1 and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(140, 140, 140)
+        btn.Text = tabIcons[i] .. " " .. name
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = isMobile and 10 or 9
+        btn.AutoButtonColor = false
+        btn.Active = true
+        btn.ZIndex = 10
+        btn.Parent = Content
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 3)
+        btnCorner.Parent = btn
+        
+        local panel = Instance.new("Frame")
+        panel.Size = UDim2.new(1, 0, 1, -tabHeight - 4)
+        panel.Position = UDim2.new(0, 0, 0, tabHeight + 4)
+        panel.BackgroundTransparency = 1
+        panel.Visible = (i == 1)
+        panel.Parent = Content
+        
+        btn.Activated:Connect(function()
+            for j = 1, #tabButtons do
+                tabButtons[j].BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+                tabButtons[j].TextColor3 = Color3.fromRGB(140, 140, 140)
+                tabPanels[j].Visible = false
+            end
+            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            panel.Visible = true
+            selectedTab = i
+        end)
+        
+        table.insert(tabButtons, btn)
+        table.insert(tabPanels, panel)
+    end
+    
+    -- =============================================
+    -- ESP TAB
+    -- =============================================
+    local espPanel = tabPanels[1]
+    
+    -- ESP Status
+    local ESPStatus = Instance.new("TextLabel")
+    ESPStatus.Size = UDim2.new(0.5, 0, 0, 18)
+    ESPStatus.Position = UDim2.new(0, 10, 0, 4)
+    ESPStatus.BackgroundTransparency = 1
+    ESPStatus.TextColor3 = Color3.fromRGB(0, 255, 100)
+    ESPStatus.Text = "● ESP Active"
+    ESPStatus.TextXAlignment = Enum.TextXAlignment.Left
+    ESPStatus.Font = Enum.Font.GothamBold
+    ESPStatus.TextSize = isMobile and 10 or 9
+    ESPStatus.Parent = espPanel
+    
+    -- Toggle Button
+    local ToggleBtn = Instance.new("TextButton")
+    ToggleBtn.Size = UDim2.new(0, isMobile and 55 or 50, 0, isMobile and 22 or 20)
+    ToggleBtn.Position = UDim2.new(1, isMobile and -65 or -60, 0, 4)
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    ToggleBtn.BorderSizePixel = 0
+    ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleBtn.Text = "ON"
+    ToggleBtn.Font = Enum.Font.GothamBold
+    ToggleBtn.TextSize = isMobile and 9 or 8
+    ToggleBtn.AutoButtonColor = false
+    ToggleBtn.Active = true
+    ToggleBtn.ZIndex = 10
+    ToggleBtn.Parent = espPanel
+    
+    local TCorner2 = Instance.new("UICorner")
+    TCorner2.CornerRadius = UDim.new(0, 3)
+    TCorner2.Parent = ToggleBtn
+    
+    ToggleBtn.Activated:Connect(function()
+        Config.ESPEnabled = not Config.ESPEnabled
+        ToggleBtn.Text = Config.ESPEnabled and "ON" or "OFF"
+        ToggleBtn.BackgroundColor3 = Config.ESPEnabled and Color3.fromRGB(35, 35, 35) or Color3.fromRGB(55, 20, 20)
+        ESPStatus.Text = Config.ESPEnabled and "● ESP Active" or "● ESP Off"
+        ESPStatus.TextColor3 = Config.ESPEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(150, 150, 150)
+    end)
+    
+    -- Helper function
+    local function label(parent, text, y, color)
+        local l = Instance.new("TextLabel")
+        l.Size = UDim2.new(1, -20, 0, 16)
+        l.Position = UDim2.new(0, 10, 0, y)
+        l.BackgroundTransparency = 1
+        l.TextColor3 = color or Color3.fromRGB(180, 180, 180)
+        l.Text = text
+        l.TextXAlignment = Enum.TextXAlignment.Left
+        l.Font = Enum.Font.GothamBold
+        l.TextSize = isMobile and 10 or 9
+        l.Parent = parent
+        return l
+    end
+    
+    label(espPanel, "⚡ Speed: " .. Config.Speed, 28, Color3.fromRGB(0, 200, 255))
+    label(espPanel, "🦘 Jump: " .. Config.JumpPower, 46, Color3.fromRGB(100, 200, 255))
+    label(espPanel, "🔄 Air Jumps: " .. Config.MaxAirJumps, 64, Color3.fromRGB(200, 200, 100))
+    label(espPanel, "📏 Range: " .. Config.MaxESPDistance .. "m", 82, Color3.fromRGB(255, 200, 0))
+    label(espPanel, "👥 Players: 0", 100, Color3.fromRGB(100, 255, 100))
+    
+    -- =============================================
+    -- PLAYER TAB
+    -- =============================================
+    local playerPanel = tabPanels[2]
+    
+    label(playerPanel, "👤 " .. LocalPlayer.Name, 4, Color3.fromRGB(255, 255, 255))
+    
+    local BountyLabel = label(playerPanel, "💰 Bounty: Searching...", 22, Color3.fromRGB(255, 200, 0))
+    
+    -- Separator
+    local Sep = Instance.new("Frame")
+    Sep.Size = UDim2.new(1, -20, 0, 1)
+    Sep.Position = UDim2.new(0, 10, 0, 42)
+    Sep.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    Sep.BorderSizePixel = 0
+    Sep.Parent = playerPanel
+    
+    label(playerPanel, "❤️ Health", 48, Color3.fromRGB(120, 120, 120))
+    
+    -- Health Bar
+    local HealthBg = Instance.new("Frame")
+    HealthBg.Size = UDim2.new(1, -20, 0, 12)
+    HealthBg.Position = UDim2.new(0, 10, 0, 64)
+    HealthBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    HealthBg.BorderSizePixel = 0
+    HealthBg.Parent = playerPanel
+    
+    local HCorner = Instance.new("UICorner")
+    HCorner.CornerRadius = UDim.new(0, 3)
+    HCorner.Parent = HealthBg
+    
+    local HealthFill = Instance.new("Frame")
+    HealthFill.Size = UDim2.new(1, 0, 1, 0)
+    HealthFill.BackgroundColor3 = Color3.fromRGB(60, 200, 60)
+    HealthFill.BorderSizePixel = 0
+    HealthFill.Parent = HealthBg
+    
+    local HFCorner = Instance.new("UICorner")
+    HFCorner.CornerRadius = UDim.new(0, 3)
+    HFCorner.Parent = HealthFill
+    
+    local HealthText = Instance.new("TextLabel")
+    HealthText.Size = UDim2.new(1, 0, 1, 0)
+    HealthText.BackgroundTransparency = 1
+    HealthText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    HealthText.Text = "100%"
+    HealthText.Font = Enum.Font.GothamBold
+    HealthText.TextSize = 8
+    HealthText.Parent = HealthFill
+    
+    -- =============================================
+    -- SETTINGS TAB
+    -- =============================================
+    local settingsPanel = tabPanels[3]
+    
+    label(settingsPanel, "⚙️ Permanent Stats", 4, Color3.fromRGB(120, 120, 120))
+    label(settingsPanel, "Speed: " .. Config.Speed, 22, Color3.fromRGB(0, 200, 255))
+    label(settingsPanel, "Jump: " .. Config.JumpPower, 40, Color3.fromRGB(100, 200, 255))
+    label(settingsPanel, "Air Jumps: " .. Config.MaxAirJumps, 58, Color3.fromRGB(200, 200, 100))
+    label(settingsPanel, "Range: " .. Config.MaxESPDistance .. "m", 76, Color3.fromRGB(255, 200, 0))
+    
+    -- Separator
+    local Sep2 = Instance.new("Frame")
+    Sep2.Size = UDim2.new(1, -20, 0, 1)
+    Sep2.Position = UDim2.new(0, 10, 0, 96)
+    Sep2.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    Sep2.BorderSizePixel = 0
+    Sep2.Parent = settingsPanel
+    
+    -- Terminate Button
+    local TermBtn = Instance.new("TextButton")
+    TermBtn.Size = UDim2.new(1, -20, 0, isMobile and 30 or 26)
+    TermBtn.Position = UDim2.new(0, 10, 0, 104)
+    TermBtn.BackgroundColor3 = Color3.fromRGB(45, 15, 15)
+    TermBtn.BorderSizePixel = 0
+    TermBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+    TermBtn.Text = "⚠️ Terminate Script"
+    TermBtn.Font = Enum.Font.GothamBold
+    TermBtn.TextSize = isMobile and 10 or 9
+    TermBtn.AutoButtonColor = false
+    TermBtn.Active = true
+    TermBtn.ZIndex = 10
+    TermBtn.Parent = settingsPanel
+    
+    local TermCorner = Instance.new("UICorner")
+    TermCorner.CornerRadius = UDim.new(0, 3)
+    TermCorner.Parent = TermBtn
+    TermBtn.Activated:Connect(terminateScript)
+    
+    -- =============================================
+    -- MINIMIZE FUNCTIONS
+    -- =============================================
+    local function showMain()
+        Main.Visible = true
+        MinText.Visible = false
+        Config.Minimized = false
+    end
+    
+    local function showText()
+        Main.Visible = false
+        MinText.Visible = true
+        Config.Minimized = true
+    end
+    
+    MinBtn.Activated:Connect(showText)
+    MinText.Activated:Connect(showMain)
+    
+    -- Text drag
+    local textDragging = false
+    local textDragStart = nil
+    local textStartPos = nil
+    local textMoved = false
+    
+    MinText.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            textDragging = true
+            textMoved = false
+            textDragStart = input.Position
+            textStartPos = MinText.Position
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if textDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - textDragStart
+            if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then
+                textMoved = true
+            end
+            MinText.Position = UDim2.new(textStartPos.X.Scale, textStartPos.X.Offset + delta.X, textStartPos.Y.Scale, textStartPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    MinText.InputEnded:Connect(function(input)
+        if textDragging then
+            if not textMoved then
+                showMain()
+            end
+            textDragging = false
+        end
+    end)
+    
+    -- Window drag
+    local dragActive = false
+    local dragInput = nil
+    local dragStart = nil
+    local startPos = nil
+    
+    TitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragActive = true
+            dragStart = input.Position
+            startPos = Main.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragActive = false
+                end
+            end)
+        end
+    end)
+    
+    TitleBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    RunService.RenderStepped:Connect(function()
+        if dragActive and dragInput then
+            local delta = dragInput.Position - dragStart
+            Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    return {
+        Main = Main,
+        MinText = MinText,
+        FPSLabel = FPSLabel,
+        BountyLabel = BountyLabel,
+        HealthFill = HealthFill,
+        HealthText = HealthText,
+        ESPStatus = ESPStatus,
+        ToggleBtn = ToggleBtn,
+        PlayerCountLabel = espPanel:FindFirstChildWhichIsA("TextLabel") and espPanel:FindFirstChildWhichIsA("TextLabel") or nil
+    }
+end
+
+-- =============================================
 -- SPEED & JUMP SYSTEM
 -- =============================================
 local function applyStats()
@@ -617,17 +596,21 @@ local function createESP(player)
     
     if ESPObjects[player.Name] then
         pcall(function()
-            if ESPObjects[player.Name].Billboard then ESPObjects[player.Name].Billboard:Destroy() end
-            if ESPObjects[player.Name].Highlight then ESPObjects[player.Name].Highlight:Destroy() end
+            if ESPObjects[player.Name].Billboard then
+                ESPObjects[player.Name].Billboard:Destroy()
+            end
+            if ESPObjects[player.Name].Highlight then
+                ESPObjects[player.Name].Highlight:Destroy()
+            end
         end)
         ESPObjects[player.Name] = nil
     end
     
     local function addESP(character)
         if not character then return end
-        local h = character:WaitForChild("Humanoid", 3)
-        local root = character:WaitForChild("HumanoidRootPart", 3)
-        local head = character:WaitForChild("Head", 3)
+        local h = character:FindFirstChild("Humanoid")
+        local root = character:FindFirstChild("HumanoidRootPart")
+        local head = character:FindFirstChild("Head")
         if not h or not root or not head then return end
         
         local color = getTeamColor(player)
@@ -702,7 +685,10 @@ local function createESP(player)
         }
     end
     
-    if player.Character then addESP(player.Character) end
+    if player.Character then
+        addESP(player.Character)
+    end
+    
     local conn = player.CharacterAdded:Connect(function(character)
         task.wait(0.5)
         addESP(character)
@@ -722,10 +708,8 @@ local function onTeamChanged(player)
 end
 
 -- =============================================
--- UPDATE LOOPS
+-- MAIN ESP UPDATE LOOP
 -- =============================================
-
--- ESP Update
 task.spawn(function()
     while ScriptActive do
         task.wait(0.15)
@@ -785,6 +769,8 @@ end)
 -- MAIN EXECUTION
 -- =============================================
 
+UI = createUI()
+
 -- Apply stats
 task.spawn(function()
     while ScriptActive do
@@ -801,17 +787,15 @@ end)
 
 -- FPS update
 task.spawn(function()
-    local fc, last = 0, tick()
+    local fc = 0
+    local last = tick()
     while ScriptActive do
         fc = fc + 1
         if tick() - last >= 0.5 then
             local fps = math.floor(fc / (tick() - last))
-            fc, last = 0, tick()
-            if RayfieldLoaded and Window then
-                pcall(function()
-                    Window:SetSubtitle("FPS: " .. fps)
-                end)
-            elseif UI and UI.FPSLabel then
+            fc = 0
+            last = tick()
+            if UI and UI.FPSLabel then
                 UI.FPSLabel.Text = "FPS: " .. fps
                 UI.FPSLabel.TextColor3 = fps >= 50 and Color3.fromRGB(0, 255, 100) or (fps >= 25 and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(255, 80, 80))
             end
@@ -820,21 +804,19 @@ task.spawn(function()
     end
 end)
 
--- Health update (fallback only)
+-- Health update
 task.spawn(function()
     while ScriptActive do
-        if not RayfieldLoaded and UI and UI.HealthFill then
-            pcall(function()
-                local char = LocalPlayer.Character
-                if char and char:FindFirstChild("Humanoid") then
-                    local h = char.Humanoid
-                    local pct = math.clamp(h.Health / h.MaxHealth, 0, 1)
-                    UI.HealthFill.Size = UDim2.new(pct, 0, 1, 0)
-                    UI.HealthText.Text = math.floor(pct * 100) .. "%"
-                    UI.HealthFill.BackgroundColor3 = pct > 0.5 and Color3.fromRGB(60, 200, 60) or (pct > 0.25 and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(255, 50, 50))
-                end
-            end)
-        end
+        pcall(function()
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("Humanoid") and UI then
+                local h = char.Humanoid
+                local pct = math.clamp(h.Health / h.MaxHealth, 0, 1)
+                UI.HealthFill.Size = UDim2.new(pct, 0, 1, 0)
+                UI.HealthText.Text = math.floor(pct * 100) .. "%"
+                UI.HealthFill.BackgroundColor3 = pct > 0.5 and Color3.fromRGB(60, 200, 60) or (pct > 0.25 and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(255, 50, 50))
+            end
+        end)
         task.wait(0.3)
     end
 end)
@@ -843,28 +825,29 @@ end)
 task.spawn(function()
     while ScriptActive do
         local bounty = scanBounty()
-        if UI then
-            if RayfieldLoaded and UI.BountyLabel then
-                UI.BountyLabel:Set(bounty and "💰 Bounty: " .. bounty or "💰 Bounty: Not found")
-            elseif UI.BountyLabel then
-                UI.BountyLabel.Text = bounty and "💰 Bounty: " .. bounty or "💰 Bounty: Not found"
-            end
+        if UI and UI.BountyLabel then
+            UI.BountyLabel.Text = bounty and "💰 Bounty: " .. bounty or "💰 Bounty: Not found"
         end
         task.wait(3)
     end
 end)
 
--- Player count (fallback only)
+-- Player count update
 task.spawn(function()
     while ScriptActive do
-        if not RayfieldLoaded and UI and UI.PlayerCount then
-            UI.PlayerCount.Text = "👥 Players: " .. #Players:GetPlayers()
+        if UI and UI.PlayerCountLabel then
+            -- Find the player count label in ESP tab
+            for _, child in pairs(UI.PlayerCountLabel.Parent:GetChildren()) do
+                if child:IsA("TextLabel") and string.find(child.Text, "👥 Players:") then
+                    child.Text = "👥 Players: " .. #Players:GetPlayers()
+                end
+            end
         end
         task.wait(1)
     end
 end)
 
--- Init ESP
+-- Initialize ESP
 task.wait(1)
 for _, p in ipairs(Players:GetPlayers()) do
     if p ~= LocalPlayer then
@@ -893,22 +876,15 @@ end)
 
 print("")
 print("╔══════════════════════════════════════╗")
-if RayfieldLoaded then
-    print("║     UNIVERSAL ESP - Rayfield UI    ║")
-else
-    print("║     UNIVERSAL ESP - Fallback UI    ║")
-end
+print("║     UNIVERSAL ESP - Tabbed UI       ║")
 print("╠══════════════════════════════════════╣")
 print("║  ⚡ Speed: " .. Config.Speed .. "                      ║")
 print("║  🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps .. "   ║")
 print("║  👁️  ESP Active                      ║")
 print("║  📏 Range: " .. Config.MaxESPDistance .. "m              ║")
 print("╠══════════════════════════════════════╣")
-if RayfieldLoaded then
-    print("║  UI: Rayfield (Professional)       ║")
-else
-    print("║  UI: Fallback (Standalone)         ║")
-end
+print("║  Zero Dependencies - Pure Standalone║")
+print("║  Tabbed UI (ESP | Player | Settings)║")
 print("║  Click '—' to minimize              ║")
 print("║  Click '✕' to terminate             ║")
 print("╚══════════════════════════════════════╝")
