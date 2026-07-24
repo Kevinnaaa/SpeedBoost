@@ -1,5 +1,5 @@
 -- ============================================
--- UNIVERSAL ESP - MODERN UI (Teal #007F7C)
+-- UNIVERSAL ESP - MODERN UI (Dark Teal #014d4e)
 -- ALL ORIGINAL FUNCTIONS INTACT
 -- Highlight-based ESP + Speed + Air Jump + FPS
 -- ============================================
@@ -18,17 +18,17 @@ local Teams = game:GetService("Teams")
 local CoreGui = game:GetService("CoreGui")
 
 -- ============================================
--- COLORS - TEAL THEME (#007F7C)
+-- COLORS - DARK TEAL THEME (#014d4e)
 -- ============================================
-local BACKGROUND = Color3.fromRGB(0, 127, 124)
-local TOPBAR = Color3.fromRGB(0, 145, 142)
-local TABBG = Color3.fromRGB(0, 110, 107)
-local ELEMBG = Color3.fromRGB(0, 135, 132)
-local ELEMBGHOVER = Color3.fromRGB(20, 155, 152)
-local ACCENT = Color3.fromRGB(0, 200, 195)
-local BORDER = Color3.fromRGB(0, 160, 157)
-local TEXT = Color3.fromRGB(255, 255, 255)
-local TEXTDIM = Color3.fromRGB(190, 235, 233)
+local BACKGROUND = Color3.fromRGB(1, 77, 78)        -- #014d4e - Main dark teal
+local TOPBAR = Color3.fromRGB(2, 90, 91)            -- Slightly lighter dark teal
+local TABBG = Color3.fromRGB(0, 60, 61)             -- Darker teal for tabs
+local ELEMBG = Color3.fromRGB(2, 85, 86)            -- Element background
+local ELEMBGHOVER = Color3.fromRGB(10, 105, 106)    -- Element hover
+local ACCENT = Color3.fromRGB(0, 200, 195)          -- Bright teal accent
+local BORDER = Color3.fromRGB(0, 160, 157)          -- Border color
+local TEXT = Color3.fromRGB(255, 255, 255)          -- White text
+local TEXTDIM = Color3.fromRGB(170, 220, 218)       -- Dim text
 
 -- Detect platform
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
@@ -198,7 +198,7 @@ local function scanBounty()
 end
 
 -- ============================================
--- GUI CREATION - MODERN TEAL UI
+-- GUI CREATION - DARK TEAL UI
 -- ============================================
 local GUI = Instance.new("ScreenGui")
 GUI.Name = "UniversalESP_GUI"
@@ -1561,7 +1561,7 @@ print("║  🦘 Jump: " .. Config.JumpPower .. " | Air: " .. Config.MaxAirJumps
 print("║  👁️  ESP Active                      ║")
 print("║  📏 Range: " .. Config.MaxESPDistance .. "m              ║")
 print("╠══════════════════════════════════════╣")
-print("║  🎨 Theme: Teal #007F7C             ║")
+print("║  🎨 Theme: Dark Teal #014d4e        ║")
 print("║  Click '─' to minimize to text      ║")
 print("║  Click '✕' to terminate             ║")
 print("╚══════════════════════════════════════╝")
